@@ -301,11 +301,6 @@ public class App
         connectProperties.setProperty(DestinationDataProvider.JCO_CLIENT, sap.client);
         connectProperties.setProperty(DestinationDataProvider.JCO_USER, sap.jcoUser);
         connectProperties.setProperty(DestinationDataProvider.JCO_PASSWD, sap.jcoPassword);
-        // connectProperties.setProperty(DestinationDataProvider.JCO_ASHOST, "hcmsbxas01.sap.digitalriver.com");
-        // connectProperties.setProperty(DestinationDataProvider.JCO_SYSNR, "00");
-        // connectProperties.setProperty(DestinationDataProvider.JCO_CLIENT, "300");
-        // connectProperties.setProperty(DestinationDataProvider.JCO_USER, "DRVEZATEST");
-        // connectProperties.setProperty(DestinationDataProvider.JCO_PASSWD, "Veza123!");
         connectProperties.setProperty(DestinationDataProvider.JCO_LANG, "en");
         return connectProperties;
     }   
