@@ -63,9 +63,9 @@ public class App
             // .get("/echo/{text}", ctx -> ctx.result("Echo " + ctx.pathParam("text") +" at " + getCurrentTimeString()))
             .post("/ping", pingHandler)
             .post("/lock", lockHandler)
-	    .post("/create_user", createUserHandler)
-	    .post("/assign_groups", assignGroupHandler)
-	    .start();
+	        .post("/create_user", createUserHandler)
+	        .post("/assign_groups", assignGroupHandler)
+	        .start();
     }
 
     public static String getCurrentTimeString() {
