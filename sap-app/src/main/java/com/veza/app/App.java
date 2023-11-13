@@ -88,13 +88,18 @@ public class App
                     return;
                 }
                 LOGGER.info("Ping " + sapServer);
-            
-                memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromUI(sapServer));
-                if (pingDestination(sapServer.host)) {
-                    LOGGER.info("Ping OK");
-                    ctx.result("OK");
+                if (sapServer.isTestingServer) {
                     ctx.status(200);
                     return;
+                }
+                synchronized(memoryProvider) {
+                    memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromUI(sapServer));
+                    if (pingDestination(sapServer.host)) {
+                        LOGGER.info("Ping OK");
+                        ctx.result("OK");
+                        ctx.status(200);
+                        return;
+                    }
                 }
             } catch (Exception exception) {
                 throw new Error(exception);
@@ -116,12 +121,18 @@ public class App
                     return;
                 }
                 LOGGER.info("Create User " + sapUser);
-                memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromUI(sapUser.server));
-                if (createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname)) {
-                    LOGGER.info("Create User OK");
-                    ctx.result("{}");
+                if (sapUser.server.isTestingServer) {
                     ctx.status(200);
                     return;
+                }
+                synchronized(memoryProvider) {
+                    memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromUI(sapUser.server));
+                    if (createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname)) {
+                        LOGGER.info("Create User OK");
+                        ctx.result("{}");
+                        ctx.status(200);
+                        return;
+                    }
                 }
             } catch (Exception exception) {
                 throw new Error(exception);
@@ -143,12 +154,18 @@ public class App
                     return;
                 }
                 LOGGER.info("Assign group to User " + request);
-                memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
-                if (addUserGroupToUser(request.server.host, request.username, request.userGroups)) {
-                    LOGGER.info("Assign group to user OK!");
-		            ctx.result("{}");
+                if (request.server.isTestingServer) {
                     ctx.status(200);
                     return;
+                }
+                synchronized(memoryProvider) {
+                    memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
+                    if (addUserGroupToUser(request.server.host, request.username, request.userGroups)) {
+                        LOGGER.info("Assign group to user OK!");
+		                ctx.result("{}");
+                        ctx.status(200);
+                        return;
+                    }
                 }
             } catch (Exception exception) {
                 throw new Error(exception);
@@ -170,12 +187,18 @@ public class App
                     return;
                 }
                 LOGGER.info("Lock User " + request);
-                memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
-                if (lockUser(request.server.host, request.username)) {
-                    LOGGER.info("Lock user OK");
-		            ctx.result("{}");
+                if (request.server.isTestingServer) {
                     ctx.status(200);
                     return;
+                }
+                synchronized(memoryProvider) {
+                    memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
+                    if (lockUser(request.server.host, request.username)) {
+                        LOGGER.info("Lock user OK");
+		                ctx.result("{}");
+                        ctx.status(200);
+                        return;
+                    }
                 }
             } catch (Exception exception) {
                 throw new Error(exception);
@@ -313,9 +336,12 @@ public class App
         public String jcoUser;
         public String jcoPassword;
 
+        public Boolean isTestingServer; 
+
         @Override
         public String toString() {
-            return "{host="+host+", systemNumber="+systemNumber+", client="+client+", jcoUser="+jcoUser+", jcoPassword=*******}";
+            return "{host="+host+", systemNumber="+systemNumber+", client="+client+", jcoUser="
+                +jcoUser+", jcoPassword=*******, isTestingServer="+(isTestingServer? "true" : "false")+"}";
         }
     }
 
