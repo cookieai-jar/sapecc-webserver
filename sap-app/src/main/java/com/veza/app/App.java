@@ -30,7 +30,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Nov,2023";
+    public static final String version = "Nov 2023 Buid";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
     static ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     static InMemoryDestinationDataProvider memoryProvider;
@@ -55,10 +55,11 @@ public class App
         CreateUserHandler createUserHandler = new CreateUserHandler();
         AssignGroupHandler assignGroupHandler = new AssignGroupHandler();
 
+        LOGGER.info("Start Javalin webserver ...");
         Javalin app = Javalin.create(config -> {
             config.plugins.register(plugin);
         })
-            .get("/helloworld", ctx -> ctx.result("Current time:" + getCurrentTimeString() + ", Version:" + version))
+            .get("/about", ctx -> ctx.result(version))
             // .get("/echo/{text}", ctx -> ctx.result("Echo " + ctx.pathParam("text") +" at " + getCurrentTimeString()))
             .post("/ping", pingHandler)
             .post("/lock", lockHandler)
