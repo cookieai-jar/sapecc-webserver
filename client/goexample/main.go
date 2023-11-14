@@ -42,7 +42,7 @@ type SapEccCreateUserRequest struct {
 type SapEccAssignUserGroupRequest struct {
 	Server     SapEccServer `json:"server"`
 	Username   string       `json:"username"`
-	UserGroups []string     `json"userGroups"`
+	UserGroups []string     `json:"userGroups"`
 }
 
 type Client struct {
