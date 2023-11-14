@@ -127,12 +127,12 @@ func (c *Client) GetVersion(ctx context.Context) (string, error) {
 	url := "https://127.0.0.1:9443/about"
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		fmt.Println("Unable to create a request for /about.")
+		fmt.Println("Unable to create a request for /about. err: " + err.Error())
 		return "", err
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		fmt.Println("Unable to get response for /about.")
+		fmt.Println("Unable to get response for /about. err: " + err.Error())
 		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -168,12 +168,12 @@ func (c *Client) Ping(ctx context.Context) error {
 	}
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
-		fmt.Println("Unable to create a request for /ping.")
+		fmt.Println("Unable to create a request for /ping. err:" + err.Error())
 		return err
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		fmt.Println("Unable to get response for /ping.")
+		fmt.Println("Unable to get response for /ping. err: " + err.Error())
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -201,7 +201,7 @@ func (c *Client) Lock(ctx context.Context, username string) error {
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		fmt.Println("Unable to get response for /lock.")
+		fmt.Println("Unable to get response for /lock. err: " + err.Error())
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -232,7 +232,7 @@ func (c *Client) CreateUser(ctx context.Context, username, password, firstname, 
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		fmt.Println("Unable to get response for /create_user.")
+		fmt.Println("Unable to get response for /create_user. err: " + err.Error())
 		return err
 	}
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
@@ -256,7 +256,7 @@ func (c *Client) AssignUserGroups(ctx context.Context, username string, groups [
 	fmt.Println("the body is " + string(body))
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
-		fmt.Println("Unable to create a request for /assign_groups.")
+		fmt.Println("Unable to create a request for /assign_groups. err: " + err.Error())
 		return err
 	}
 	resp, err := c.httpClient.Do(req)
