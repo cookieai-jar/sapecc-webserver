@@ -337,7 +337,7 @@ public class App
         public String jcoUser;
         public String jcoPassword;
 
-        public Boolean isTestingServer; 
+        public boolean isTestingServer;
 
         @Override
         public String toString() {
