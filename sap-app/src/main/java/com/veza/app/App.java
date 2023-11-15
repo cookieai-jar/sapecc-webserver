@@ -32,6 +32,8 @@ public class App
 {
     public static final String version = "Nov 2023 Buid";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
+
+    SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
     static ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     static InMemoryDestinationDataProvider memoryProvider;
 
@@ -39,6 +41,8 @@ public class App
     {
         LOGGER.info("Starting....");
 
+        SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
+        mapper.setDateFormat(df);
         SSLPlugin plugin = new SSLPlugin(conf -> {
             conf.sniHostCheck = false;
             conf.insecurePort = 9090;
@@ -246,7 +250,7 @@ public class App
         return false;
     }    
 
-    private static Boolean addUserGroupToUser(String destName, String username, String[] newGroups) {
+    private static Boolean addUserGroupToUser(String destName, String username, UserGroup[] newGroups) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction functionExisting=destination.getRepository().getFunction("BAPI_USER_GET_DETAIL");
@@ -272,7 +276,13 @@ public class App
             }
             for (int j=0;j<newGroups.length;j++) {
                 groups.appendRow();
-                groups.setValue("AGR_NAME", newGroups[j]);
+                groups.setValue("AGR_NAME", newGroups[j].group);
+                if (newGroups[j].fromDate != null) {
+                    groups.setValue("FROM_DAT", newGroups[j].fromDate);
+                }
+                if (newGroups[j].toDate != null) {
+                    groups.setValue("TO_DAT", newGroups[j].toDate);
+                }
             }
             function.getImportParameterList().setValue("USERNAME", username);
             function.execute(destination);
@@ -355,16 +365,41 @@ public class App
         }
     }
 
+    public static class UserGroup {
+        public String group;
+        public Date fromDate;
+        public Date toDate;
+        @Override
+        public String toString() {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+            String fromDateString = "undefined";
+            String toDateString = "undefined";
+            if (fromDate != null) {
+                fromDateString = dateFormat.format(fromDate);
+            }
+            if (toDate != null) {
+                toDateString = dateFormat.format(toDate);
+            }
+            return group +":{"+fromDateString +":" +toDateString+"}";
+        }
+    }
+
     public static class SapAssignUserGroupRequest {
         public SapServer server;
         public String username;
-        public String[] userGroups;
+        public UserGroup[] userGroups;
         @Override
         public String toString() {
-            String joinUserGroups = "[]";
+            String joinUserGroups = "";
             if (userGroups != null) {
-                joinUserGroups = "["+String.join(",", userGroups)+"]";
+                for (int i=0;i< userGroups.length; i++) {
+                    if (i > 0) {
+                        joinUserGroups += ",";
+                    }
+                    joinUserGroups += userGroups[i].toString();
+                }
             }
+            joinUserGroups = "["+ joinUserGroups +"]";
             return "{server="+server.toString()+", username="+username+", userGroups="+joinUserGroups+"}";
         }
     }
