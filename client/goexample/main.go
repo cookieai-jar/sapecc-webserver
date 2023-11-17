@@ -32,12 +32,13 @@ type SapEccLockUserRequest struct {
 }
 
 type SapEccCreateUserRequest struct {
-	Server      SapEccServer `json:"server"`
-	Username    string       `json:"username"`
-	Password    string       `json:"password"`
-	Firstname   string       `json:"firstname"`
-	Lastname    string       `json:"lastname"`
-	LicenseType string       `json:"licenseType"`
+	Server      SapEccServer      `json:"server"`
+	Username    string            `json:"username"`
+	Password    string            `json:"password"`
+	Firstname   string            `json:"firstname"`
+	Lastname    string            `json:"lastname"`
+	LicenseType string            `json:"licenseType"`
+	Parameters  map[string]string `json:"parameters"`
 }
 
 // This is the Role of SAP.
@@ -107,10 +108,11 @@ func main() {
 	firstname := "FirstnameSix"
 	lastname := "John"
 	licenseType := "91"
+	parameters := map[string]string{"/BA1/F4_EXCH": "Test", "/SPE/IF_QUEUE_LOG": "S"}
 	groups := []SapActivityGroup{{Group: "/IPRO/MANAGER"}}
 
 	fmt.Println("Now create user " + username)
-	err = client.CreateUser(ctx, url, port, username, password, firstname, lastname, licenseType)
+	err = client.CreateUser(ctx, url, port, username, password, firstname, lastname, licenseType, parameters)
 	if err != nil {
 		fmt.Println("Unable to Create User " + username)
 		return
@@ -221,7 +223,7 @@ func (c *Client) Lock(ctx context.Context, vezaServerUrl string, port int, usern
 	return nil
 }
 
-func (c *Client) CreateUser(ctx context.Context, vezaServerUrl string, port int, username, password, firstname, lastname, licenseType string) error {
+func (c *Client) CreateUser(ctx context.Context, vezaServerUrl string, port int, username, password, firstname, lastname, licenseType string, parameters map[string]string) error {
 	url := fmt.Sprintf("%s:%d/create_user", vezaServerUrl, port)
 	sapServer := c.getSapServer()
 	request := SapEccCreateUserRequest{
@@ -231,6 +233,7 @@ func (c *Client) CreateUser(ctx context.Context, vezaServerUrl string, port int,
 		Firstname:   firstname,
 		Lastname:    lastname,
 		LicenseType: licenseType,
+		Parameters:  parameters,
 	}
 	body, err := json.Marshal(request)
 	if err != nil {

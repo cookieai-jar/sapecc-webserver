@@ -132,12 +132,10 @@ public class App
                     ctx.status(200);
                     return;
                 }
-                Map<String, String> paramMap = new HashMap<>();
-                paramMap.put("/BA1/F4_EXCH", "Test");
-                paramMap.put("/SPE/IF_QUEUE_LOG", "S");
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromUI(sapUser.server));
-                    if (createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname, sapUser.licenseType, paramMap)) {
+                    if (createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname,
+                        sapUser.lastname, sapUser.licenseType, sapUser.parameters)) {
                         LOGGER.info("Create User OK");
                         ctx.result("{}");
                         ctx.status(200);
@@ -501,11 +499,12 @@ public class App
         public String firstname;
         public String lastname;
         public String licenseType;
+        public Map<String, String> parameters;
 
         @Override
         public String toString() {
-            return "{server="+server.toString()+", username="
-                +username+", firstName="+firstname+", lastName="+lastname+", licenseType="+licenseType+"}";
+            return "{server="+server.toString()+", username="+username+", firstName="+firstname+", lastName="+lastname
+                   +", licenseType="+licenseType+", paramters="+parameters+"}";
         }
     }
 
