@@ -358,10 +358,13 @@ public class App
             function.execute(destination);
             // For a user, print out the license related structure.
             JCoStructure uClass = function.getExportParameterList().getStructure("UCLASS");
-            LOGGER.info("The whole uClass is " + uClass.getString());
+            // LOGGER.info("The whole uClass is " + uClass.getString());
             String licType = uClass.getString("LIC_TYPE");
             LOGGER.info("The lic type is " + licType);
-
+            String specVer = uClass.getString("SPEC_VERS");
+            LOGGER.info(" spec ver is " +specVer);
+            String sysID = uClass.getString("SYSID");
+            LOGGER.info(" sysID is " + sysID);
         } catch (JCoException e) {
             LOGGER.error("get user detail of " + username + " to " + destName + " failed.");
             e.printStackTrace();
