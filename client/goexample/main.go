@@ -148,6 +148,7 @@ func (c *Client) GetVersion(ctx context.Context, vezaServerUrl string, port int)
 		fmt.Println("Unable to get response for /about. err: " + err.Error())
 		return "", err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return "", errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
@@ -189,6 +190,7 @@ func (c *Client) Ping(ctx context.Context, vezaServerUrl string, port int) error
 		fmt.Println("Unable to get response for /ping. err: " + err.Error())
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
@@ -196,7 +198,7 @@ func (c *Client) Ping(ctx context.Context, vezaServerUrl string, port int) error
 }
 
 func (c *Client) Lock(ctx context.Context, vezaServerUrl string, port int, username string) error {
-	url := "https://127.0.0.1:9443/lock"
+	url := fmt.Sprintf("%s:%d/lock", vezaServerUrl, port)
 	sapServer := c.getSapServer()
 	request := SapEccLockUserRequest{
 		Server:   sapServer,
@@ -217,6 +219,7 @@ func (c *Client) Lock(ctx context.Context, vezaServerUrl string, port int, usern
 		fmt.Println("Unable to get response for /lock. err: " + err.Error())
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
@@ -250,6 +253,7 @@ func (c *Client) CreateUser(ctx context.Context, vezaServerUrl string, port int,
 		fmt.Println("Unable to get response for /create_user. err: " + err.Error())
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
@@ -279,6 +283,7 @@ func (c *Client) AssignUserGroups(ctx context.Context, vezaServerUrl string, por
 		fmt.Println("Unable to get response for /assign_groups.")
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
