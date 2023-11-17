@@ -134,7 +134,7 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromUI(sapUser.server));
-                    if (createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname)) {
+                    if (createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname, sapUser.licenseType)) {
                         LOGGER.info("Create User OK");
                         ctx.result("{}");
                         ctx.status(200);
@@ -261,7 +261,7 @@ public class App
         return false;
     }
 
-    private static Boolean createUser(String destName, String username, String password, String firstName, String lastName) {
+    private static Boolean createUser(String destName, String username, String password, String firstName, String lastName, String licenseType) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CREATE1");
@@ -274,6 +274,8 @@ public class App
             addressData.setValue("FIRSTNAME", firstName);
             JCoStructure passwordData = function.getImportParameterList().getStructure("PASSWORD");        
             passwordData.setValue("BAPIPWD", password);
+            JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
+            uClass.setValue("LIC_TYPE", licenseType);
 
             function.execute(destination);
             return processFunctionReturn(function);
@@ -358,13 +360,18 @@ public class App
             function.execute(destination);
             // For a user, print out the license related structure.
             JCoStructure uClass = function.getExportParameterList().getStructure("UCLASS");
-            // LOGGER.info("The whole uClass is " + uClass.getString());
             String licType = uClass.getString("LIC_TYPE");
             LOGGER.info("The lic type is " + licType);
-            String specVer = uClass.getString("SPEC_VERS");
-            LOGGER.info(" spec ver is " +specVer);
-            String sysID = uClass.getString("SYSID");
-            LOGGER.info(" sysID is " + sysID);
+
+            // Print its table of parameters
+            JCoTable parameters=function.getTableParameterList().getTable("PARAMETER");
+            for (int i=0;i<parameters.getNumRows(); i++) {
+                parameters.setRow(i);
+                String parID = parameters.getString("PARID");
+                String parValue = parameters.getString("PARVA");
+                String parText = parameters.getString("PARTXT");
+                LOGGER.info("parID: " + parID +", parValue: " + parValue + ", parText: " + parText);
+            }
         } catch (JCoException e) {
             LOGGER.error("get user detail of " + username + " to " + destName + " failed.");
             e.printStackTrace();
@@ -480,11 +487,12 @@ public class App
         public String password;
         public String firstname;
         public String lastname;
+        public String licenseType;
 
         @Override
         public String toString() {
             return "{server="+server.toString()+", username="
-                +username+", firstName="+firstname+", lastName="+lastname+"}";
+                +username+", firstName="+firstname+", lastName="+lastname+", licenseType="+licenseType+"}";
         }
     }
 

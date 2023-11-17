@@ -32,11 +32,12 @@ type SapEccLockUserRequest struct {
 }
 
 type SapEccCreateUserRequest struct {
-	Server    SapEccServer `json:"server"`
-	Username  string       `json:"username"`
-	Password  string       `json:"password"`
-	Firstname string       `json:"firstname"`
-	Lastname  string       `json:"lastname"`
+	Server      SapEccServer `json:"server"`
+	Username    string       `json:"username"`
+	Password    string       `json:"password"`
+	Firstname   string       `json:"firstname"`
+	Lastname    string       `json:"lastname"`
+	LicenseType string       `json:"licenseType"`
 }
 
 // This is the Role of SAP.
@@ -105,10 +106,11 @@ func main() {
 	password := "Veza123!"
 	firstname := "FirstnameSix"
 	lastname := "John"
+	licenseType := "91"
 	groups := []SapActivityGroup{{Group: "/IPRO/MANAGER"}}
 
 	fmt.Println("Now create user " + username)
-	err = client.CreateUser(ctx, url, port, username, password, firstname, lastname)
+	err = client.CreateUser(ctx, url, port, username, password, firstname, lastname, licenseType)
 	if err != nil {
 		fmt.Println("Unable to Create User " + username)
 		return
@@ -219,15 +221,16 @@ func (c *Client) Lock(ctx context.Context, vezaServerUrl string, port int, usern
 	return nil
 }
 
-func (c *Client) CreateUser(ctx context.Context, vezaServerUrl string, port int, username, password, firstname, lastname string) error {
+func (c *Client) CreateUser(ctx context.Context, vezaServerUrl string, port int, username, password, firstname, lastname, licenseType string) error {
 	url := fmt.Sprintf("%s:%d/create_user", vezaServerUrl, port)
 	sapServer := c.getSapServer()
 	request := SapEccCreateUserRequest{
-		Server:    sapServer,
-		Username:  username,
-		Password:  password,
-		Firstname: firstname,
-		Lastname:  lastname,
+		Server:      sapServer,
+		Username:    username,
+		Password:    password,
+		Firstname:   firstname,
+		Lastname:    lastname,
+		LicenseType: licenseType,
 	}
 	body, err := json.Marshal(request)
 	if err != nil {
