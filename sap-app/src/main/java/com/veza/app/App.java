@@ -58,6 +58,7 @@ public class App
         LockHandler lockHandler = new LockHandler();
         CreateUserHandler createUserHandler = new CreateUserHandler();
         AssignGroupHandler assignGroupHandler = new AssignGroupHandler();
+        GetUserDetailHandler getUserDetailHandler = new GetUserDetailHandler();
 
         LOGGER.info("Start Javalin webserver ...");
         Javalin app = Javalin.create(config -> {
@@ -69,6 +70,7 @@ public class App
             .post("/lock", lockHandler)
 	        .post("/create_user", createUserHandler)
 	        .post("/assign_groups", assignGroupHandler)
+            .post("/user_detail", getUserDetailHandler)
 	        .start();
     }
 
@@ -209,7 +211,40 @@ public class App
                 throw new Error(exception);
             }
         }
-    }    
+    }
+
+    private static class GetUserDetailHandler implements Handler {
+        @Override
+        public void handle(Context ctx) {
+            String body = ctx.body();
+            try {
+                SapUserDetailRequest request = mapper.readValue(body, SapUserDetailRequest.class);
+                if (request.server.host.isEmpty() || request.server.client.isEmpty() || request.server.jcoPassword.isEmpty()
+                    || request.server.jcoUser.isEmpty() || request.server.systemNumber.isEmpty() ) {
+                    // This is invalid input
+                    ctx.result("Invalid sap instance, missing at least one of host,client,systemNumber,jcoUser or jcoPassword");
+                    ctx.status(400);
+                    return;
+                }
+                LOGGER.info("Get User Detail " + request);
+                if (request.server.isTestingServer) {
+                    ctx.status(200);
+                    return;
+                }
+                synchronized(memoryProvider) {
+                    memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
+                    if (getUserDetail(request.server.host, request.username)) {
+                        LOGGER.info("Get user detail OK");
+		                ctx.result("{}");
+                        ctx.status(200);
+                        return;
+                    }
+                }
+            } catch (Exception exception) {
+                throw new Error(exception);
+            }
+        }
+    }
 
     private static Boolean pingDestination(String destName)
     {
@@ -234,7 +269,6 @@ public class App
                 throw new RuntimeException("BAPI_USER_CREATE1 not found in SAP.");
             function.getImportParameterList().setValue("USERNAME", username);
 
-            function.execute(destination);
             JCoStructure addressData = function.getImportParameterList().getStructure("ADDRESS");
             addressData.setValue("LASTNAME", lastName);
             addressData.setValue("FIRSTNAME", firstName);
@@ -312,6 +346,29 @@ public class App
         return false;
     }
 
+    // This is a helper func to print a user detail structure (whatever needed for debug)
+    private static Boolean getUserDetail(String destName, String username) {
+        try {
+            JCoDestination destination=JCoDestinationManager.getDestination(destName);
+            JCoFunction function=destination.getRepository().getFunction("BAPI_USER_GET_DETAIL");
+            if (function==null)
+                throw new RuntimeException("BAPI_USER_GET_DETAIL not found in SAP.");
+            function.getImportParameterList().setValue("USERNAME", username);
+
+            function.execute(destination);
+            // For a user, print out the license related structure.
+            JCoStructure uClass = function.getExportParameterList().getStructure("UCLASS");
+            LOGGER.info("The whole uClass is " + uClass.getString());
+            String licType = uClass.getString("LIC_TYPE");
+            LOGGER.info("The lic type is " + licType);
+
+        } catch (JCoException e) {
+            LOGGER.error("get user detail of " + username + " to " + destName + " failed.");
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     private static Boolean processFunctionReturn(JCoFunction function) {
         JCoTable returns=function.getTableParameterList().getTable("RETURN");
         for (int i=0; i<returns.getNumRows(); i++)
@@ -357,6 +414,15 @@ public class App
     }
 
     public static class SapLockUserRequest {
+        public SapServer server;
+        public String username;
+        @Override
+        public String toString() {
+            return "{server="+server.toString()+", username="+username+"}";
+        }
+    }
+
+    public static class SapUserDetailRequest {
         public SapServer server;
         public String username;
         @Override
