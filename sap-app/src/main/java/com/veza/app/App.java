@@ -132,9 +132,12 @@ public class App
                     ctx.status(200);
                     return;
                 }
+                Map<String, String> paramMap = new HashMap<>();
+                paramMap.put("/BA1/F4_EXCH", "Test");
+                paramMap.put("/SPE/IF_QUEUE_LOG", "S");
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromUI(sapUser.server));
-                    if (createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname, sapUser.licenseType)) {
+                    if (createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname, sapUser.licenseType, paramMap)) {
                         LOGGER.info("Create User OK");
                         ctx.result("{}");
                         ctx.status(200);
@@ -261,7 +264,8 @@ public class App
         return false;
     }
 
-    private static Boolean createUser(String destName, String username, String password, String firstName, String lastName, String licenseType) {
+    private static Boolean createUser(String destName, String username, String password, String firstName, String lastName,
+        String licenseType, Map<String, String> parametersMap) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CREATE1");
@@ -276,6 +280,15 @@ public class App
             passwordData.setValue("BAPIPWD", password);
             JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
             uClass.setValue("LIC_TYPE", licenseType);
+
+            if (parametersMap != null) {
+                JCoTable parameters=function.getTableParameterList().getTable("PARAMETER");
+                for (String key : parametersMap.keySet()) {
+                    parameters.appendRow();
+                    parameters.setValue("PARID", key);
+                    parameters.setValue("PARVA", parametersMap.get(key));
+                }
+            }
 
             function.execute(destination);
             return processFunctionReturn(function);
