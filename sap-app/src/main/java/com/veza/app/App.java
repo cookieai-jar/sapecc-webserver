@@ -276,10 +276,12 @@ public class App
             addressData.setValue("FIRSTNAME", firstName);
             JCoStructure passwordData = function.getImportParameterList().getStructure("PASSWORD");        
             passwordData.setValue("BAPIPWD", password);
-            JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
-            uClass.setValue("LIC_TYPE", licenseType);
+            if (licenseType.length() > 0) {
+                JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
+                uClass.setValue("LIC_TYPE", licenseType);
+            }
 
-            if (parametersMap != null) {
+            if (parametersMap != null && parametersMap.size() > 0) {
                 JCoTable parameters=function.getTableParameterList().getTable("PARAMETER");
                 for (String key : parametersMap.keySet()) {
                     parameters.appendRow();
