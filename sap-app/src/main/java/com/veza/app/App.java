@@ -30,7 +30,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Nov 2023 Buid";
+    public static final String version = "Nov 2023 Buid, v1";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
 
     SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
@@ -54,6 +54,7 @@ public class App
         memoryProvider=new App.InMemoryDestinationDataProvider();
         Environment.registerDestinationDataProvider(memoryProvider);
 
+        AboutHandler aboutHandler = new AboutHandler();
         PingHandler pingHandler = new PingHandler();
         LockHandler lockHandler = new LockHandler();
         CreateUserHandler createUserHandler = new CreateUserHandler();
@@ -64,7 +65,7 @@ public class App
         Javalin app = Javalin.create(config -> {
             config.plugins.register(plugin);
         })
-            .get("/about", ctx -> ctx.result(version))
+            .get("/about", aboutHandler)
             // .get("/echo/{text}", ctx -> ctx.result("Echo " + ctx.pathParam("text") +" at " + getCurrentTimeString()))
             .post("/ping", pingHandler)
             .post("/lock", lockHandler)
@@ -81,6 +82,14 @@ public class App
         return dateFormat.format(date);
     }
 
+    private static class AboutHandler implements Handler {
+        @Override 
+        public void handle(Context ctx) {
+            LOGGER.info(getCurrentTimeString() + ": About");
+            ctx.result(version);
+        }
+    }
+
     private static class PingHandler implements Handler {
         @Override 
         public void handle(Context ctx) {
@@ -94,7 +103,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info("Ping " + sapServer);
+                LOGGER.info(getCurrentTimeString() + ": Ping " + sapServer);
                 if (sapServer.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -127,7 +136,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info("Create User " + sapUser);
+                LOGGER.info(getCurrentTimeString() +": Create User " + sapUser);
                 if (sapUser.server.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -161,7 +170,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info("Assign group to User " + request);
+                LOGGER.info(getCurrentTimeString() +": Assign group to User " + request);
                 if (request.server.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -194,7 +203,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info("Lock User " + request);
+                LOGGER.info(getCurrentTimeString() +": Lock User " + request);
                 if (request.server.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -227,7 +236,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info("Get User Detail " + request);
+                LOGGER.info(getCurrentTimeString() +": Get User Detail " + request);
                 if (request.server.isTestingServer) {
                     ctx.status(200);
                     return;
