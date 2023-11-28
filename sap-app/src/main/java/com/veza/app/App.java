@@ -78,7 +78,6 @@ public class App
     public static String getCurrentTimeString() {
         Date date = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
-        System.out.println("Get current date time");
         return dateFormat.format(date);
     }
 
