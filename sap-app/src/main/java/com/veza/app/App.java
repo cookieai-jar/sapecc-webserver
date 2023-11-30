@@ -114,9 +114,16 @@ public class App
                         ctx.result("OK");
                         ctx.status(200);
                         return;
+                    } else {
+                        LOGGER.error("Ping Failed");
+                        ctx.result("Failed");
+                        ctx.status(500);
+                        return;
                     }
                 }
             } catch (Exception exception) {
+                LOGGER.error("Failed to ping destination:" + exception.toString());
+                ctx.status(500);
                 throw new Error(exception);
             }
         }
@@ -148,9 +155,16 @@ public class App
                         ctx.result("{}");
                         ctx.status(200);
                         return;
+                    } else {
+                        LOGGER.error("Create User Failed");
+                        ctx.result("Failed");
+                        ctx.status(500);
+                        return;
                     }
                 }
             } catch (Exception exception) {
+                LOGGER.error("Failed to create user:" + exception.toString());
+                ctx.status(500);
                 throw new Error(exception);
             }
         }
@@ -181,9 +195,16 @@ public class App
 		                ctx.result("{}");
                         ctx.status(200);
                         return;
+                    } else {
+                        LOGGER.error("Assign group Failed");
+                        ctx.result("Failed");
+                        ctx.status(500);
+                        return;
                     }
                 }
             } catch (Exception exception) {
+                LOGGER.error("Failed to assign group:" + exception.toString());
+                ctx.status(500);
                 throw new Error(exception);
             }
         }
@@ -214,9 +235,16 @@ public class App
 		                ctx.result("{}");
                         ctx.status(200);
                         return;
+                    } else {
+                        LOGGER.error("Lock Failed");
+                        ctx.result("Failed");
+                        ctx.status(500);
+                        return;
                     }
                 }
             } catch (Exception exception) {
+                LOGGER.error("Failed to lock:" + exception.toString());
+                ctx.status(500);
                 throw new Error(exception);
             }
         }
@@ -246,6 +274,11 @@ public class App
                         LOGGER.info("Get user detail OK");
 		                ctx.result("{}");
                         ctx.status(200);
+                        return;
+                    } else {
+                        LOGGER.error("Get User Detail Failed");
+                        ctx.result("Failed");
+                        ctx.status(500);
                         return;
                     }
                 }
