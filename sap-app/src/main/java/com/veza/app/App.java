@@ -30,7 +30,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Nov 2023 Buid, v1";
+    public static final String version = "Dec 2023 Buid v1";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
 
     SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");

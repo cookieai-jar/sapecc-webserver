@@ -169,7 +169,7 @@ func (c *Client) getSapServer() SapEccServer {
 		JcoPassword:  c.password,
 
 		// IsTesting?
-		IsTestingServer: true,
+		IsTestingServer: false,
 	}
 }
 
@@ -191,6 +191,7 @@ func (c *Client) Ping(ctx context.Context, vezaServerUrl string, port int) error
 		return err
 	}
 	defer resp.Body.Close()
+	fmt.Printf("The statusCode is %d\n", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
@@ -220,6 +221,7 @@ func (c *Client) Lock(ctx context.Context, vezaServerUrl string, port int, usern
 		return err
 	}
 	defer resp.Body.Close()
+	fmt.Printf("The statusCode is %d\n", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
@@ -254,6 +256,7 @@ func (c *Client) CreateUser(ctx context.Context, vezaServerUrl string, port int,
 		return err
 	}
 	defer resp.Body.Close()
+	fmt.Printf("The statusCode is %d\n", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
@@ -284,6 +287,7 @@ func (c *Client) AssignUserGroups(ctx context.Context, vezaServerUrl string, por
 		return err
 	}
 	defer resp.Body.Close()
+	fmt.Printf("The statusCode is %d\n", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
