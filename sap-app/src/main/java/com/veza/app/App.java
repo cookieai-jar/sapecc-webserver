@@ -109,14 +109,15 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromUI(sapServer));
-                    if (pingDestination(sapServer.host)) {
+                    String message = pingDestination(sapServer.host);
+                    if ("".equals(message)) {
                         LOGGER.info("Ping OK");
                         ctx.result("OK");
                         ctx.status(200);
                         return;
                     } else {
                         LOGGER.error("Ping Failed");
-                        ctx.result("Failed");
+                        ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
@@ -124,6 +125,7 @@ public class App
             } catch (Exception exception) {
                 LOGGER.error("Failed to ping destination:" + exception.toString());
                 ctx.status(500);
+                ctx.result(exception.getMessage());
                 throw new Error(exception);
             }
         }
@@ -149,15 +151,16 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromUI(sapUser.server));
-                    if (createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname,
-                        sapUser.lastname, sapUser.licenseType, sapUser.parameters)) {
+                    String message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname,
+                        sapUser.lastname, sapUser.licenseType, sapUser.parameters);
+                    if ("".equals(message)) {
                         LOGGER.info("Create User OK");
                         ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
                         LOGGER.error("Create User Failed");
-                        ctx.result("Failed");
+                        ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
@@ -165,6 +168,7 @@ public class App
             } catch (Exception exception) {
                 LOGGER.error("Failed to create user:" + exception.toString());
                 ctx.status(500);
+                ctx.result(exception.getMessage());
                 throw new Error(exception);
             }
         }
@@ -190,14 +194,15 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
-                    if (addUserGroupToUser(request.server.host, request.username, request.userGroups)) {
+                    String message = addUserGroupToUser(request.server.host, request.username, request.userGroups);
+                    if ("".equals(message)) {
                         LOGGER.info("Assign group to user OK!");
 		                ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
                         LOGGER.error("Assign group Failed");
-                        ctx.result("Failed");
+                        ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
@@ -205,6 +210,7 @@ public class App
             } catch (Exception exception) {
                 LOGGER.error("Failed to assign group:" + exception.toString());
                 ctx.status(500);
+                ctx.result(exception.getMessage());
                 throw new Error(exception);
             }
         }
@@ -230,14 +236,15 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
-                    if (lockUser(request.server.host, request.username)) {
+                    String message = lockUser(request.server.host, request.username);
+                    if ("".equals(message)) {
                         LOGGER.info("Lock user OK");
 		                ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
                         LOGGER.error("Lock Failed");
-                        ctx.result("Failed");
+                        ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
@@ -245,6 +252,7 @@ public class App
             } catch (Exception exception) {
                 LOGGER.error("Failed to lock:" + exception.toString());
                 ctx.status(500);
+                ctx.result(exception.getMessage());
                 throw new Error(exception);
             }
         }
@@ -288,22 +296,21 @@ public class App
         }
     }
 
-    private static Boolean pingDestination(String destName)
+    private static String pingDestination(String destName)
     {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             destination.ping();
             LOGGER.info("Destination "+destName+" works");
-            return true;
+            return "";
         } catch (JCoException e) {
             LOGGER.error("Ping destination " + destName + " failed.");
             e.printStackTrace();
-            
+            return e.toString();
         }
-        return false;
     }
 
-    private static Boolean createUser(String destName, String username, String password, String firstName, String lastName,
+    private static String createUser(String destName, String username, String password, String firstName, String lastName,
         String licenseType, Map<String, String> parametersMap) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
@@ -336,11 +343,11 @@ public class App
         } catch (JCoException e) {
             LOGGER.error("create user " + username + " to " + destName + " failed.");
             e.printStackTrace();
+            return e.toString();
         }
-        return false;
-    }    
+    }
 
-    private static Boolean addUserGroupToUser(String destName, String username, UserGroup[] newGroups) {
+    private static String addUserGroupToUser(String destName, String username, UserGroup[] newGroups) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction functionExisting=destination.getRepository().getFunction("BAPI_USER_GET_DETAIL");
@@ -381,11 +388,11 @@ public class App
         } catch (JCoException e) {
             LOGGER.error("add user to gropus for user" + username + " on " + destName + "failed");
             e.printStackTrace();
+            return e.toString();
         }
-        return false;
     }
 
-    private static Boolean lockUser(String destName, String username) {
+    private static String lockUser(String destName, String username) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_LOCK");
@@ -398,8 +405,8 @@ public class App
         } catch (JCoException e) {
             LOGGER.error("lock user " + username + " to " + destName + " failed.");
             e.printStackTrace();
+            return e.toString();
         }
-        return false;
     }
 
     // This is a helper func to print a user detail structure (whatever needed for debug)
@@ -433,19 +440,22 @@ public class App
         return false;
     }
 
-    private static Boolean processFunctionReturn(JCoFunction function) {
+    private static String processFunctionReturn(JCoFunction function) {
         JCoTable returns=function.getTableParameterList().getTable("RETURN");
+        String returnErrorMessage = "";
         for (int i=0; i<returns.getNumRows(); i++)
         {
             returns.setRow(i);
             char c = returns.getChar("TYPE");
             if (c == 'S') {
-                return true;
+                return "";
             } else {
-                LOGGER.error("Return type: " + c + " Message: " + returns.getString("MESSAGE"));
+                String errMessage = "Return type: " + c + " Message: " + returns.getString("MESSAGE") + ". ";
+                LOGGER.error(errMessage);
+                returnErrorMessage += errMessage;
             }
         }
-        return false;
+        return returnErrorMessage;
     }
     
     private static Properties getDestinationPropertiesFromUI(SapServer sap)
