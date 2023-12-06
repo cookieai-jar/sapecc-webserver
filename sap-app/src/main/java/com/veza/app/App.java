@@ -511,6 +511,30 @@ public class App
             String licType = uClass.getString("LIC_TYPE");
             LOGGER.info("The lic type is " + licType);
 
+            // Function/Department/Email
+            JCoStructure address = function.getExportParameterList().getStructure("ADDRESS");
+            String funStr = address.getString("FUNCTION");
+            LOGGER.info("The function is " + funStr);
+            String departStr = address.getString("DEPARTMENT");
+            LOGGER.info("The department is " + departStr);
+            String emailStr = address.getString("E_MAIL");
+            LOGGER.info("The email is " + emailStr);
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+            JCoStructure logonData = function.getExportParameterList().getStructure("LOGONDATA");
+            Date userValidFromDate = logonData.getDate("GLTGV");
+            if (userValidFromDate != null) {
+                LOGGER.info("User valid from " + dateFormat.format(userValidFromDate));
+            } else {
+                LOGGER.info("User valid from field is empty");
+            }
+            Date userValidToDate = logonData.getDate("GLTGB");
+            if (userValidToDate != null) {
+                LOGGER.info("User valid to " + dateFormat.format(userValidFromDate));
+            } else {
+                LOGGER.info("User valid to field is empty");
+            }
+
             // Print its table of parameters
             JCoTable parameters=function.getTableParameterList().getTable("PARAMETER");
             for (int i=0;i<parameters.getNumRows(); i++) {
