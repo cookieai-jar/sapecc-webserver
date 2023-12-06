@@ -278,6 +278,14 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
+                    String message = confirmUserExist(request.server.host, request.username);
+                    LOGGER.info("!!!!!! user exist ok or not? " + message);
+                    if (!"".equals(message)) {
+                        LOGGER.error("Get User Detail Failed");
+                        ctx.result("Failed: user doesn't exists");
+                        ctx.status(500);
+                        return;
+                    }
                     if (getUserDetail(request.server.host, request.username)) {
                         LOGGER.info("Get user detail OK");
 		                ctx.result("{}");
@@ -396,6 +404,23 @@ public class App
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_LOCK");
+            if (function==null)
+                throw new RuntimeException("BAPI_USER_LOCK not found in SAP.");
+            function.getImportParameterList().setValue("USERNAME", username);
+
+            function.execute(destination);
+            return processFunctionReturn(function);
+        } catch (JCoException e) {
+            LOGGER.error("lock user " + username + " to " + destName + " failed.");
+            e.printStackTrace();
+            return e.toString();
+        }
+    }
+
+    private static String confirmUserExist(String destName, String username) {
+        try {
+            JCoDestination destination=JCoDestinationManager.getDestination(destName);
+            JCoFunction function=destination.getRepository().getFunction("BAPI_USER_EXISTENCE_CHECK");
             if (function==null)
                 throw new RuntimeException("BAPI_USER_LOCK not found in SAP.");
             function.getImportParameterList().setValue("USERNAME", username);
