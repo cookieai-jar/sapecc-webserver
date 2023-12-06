@@ -449,12 +449,12 @@ public class App
                     parameters.appendRow();
                     parameters.setValue("PARID", key);
                     parameters.setValue("PARVA", parametersMap.get(key));
-                    LOGGER.info("Set the parameters type key:" + key + " va:" + parametersMap.get(key));
+                    LOGGER.info("Set the parameters type key:" + key + " value: " + parametersMap.get(key));
                 }
                 // Add change indicator for parameters
-                // JCoStructure parameterX = function.getImportParameterList().getStructure("PARAMETERX");
-                // parameterX.setValue("UCLASS", 'X');
-                // uClassX.setValue("UCLASSSYS", 'R');
+                JCoStructure parameterX = function.getImportParameterList().getStructure("PARAMETERX");
+                parameterX.setValue("PARID", 'X');
+                parameterX.setValue("PARVA", 'X');
 
             }
             function.execute(destination);
