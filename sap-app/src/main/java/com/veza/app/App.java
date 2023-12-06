@@ -278,9 +278,9 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
-                    String message = confirmUserExist(request.server.host, request.username);
-                    LOGGER.info("!!!!!! user exist ok or not? " + message);
-                    if (!"".equals(message)) {
+                    boolean exists = confirmUserExist(request.server.host, request.username);
+                    LOGGER.info("!!!!!! user exist ok or not? " + exists);
+                    if (!exists) {
                         LOGGER.error("Get User Detail Failed");
                         ctx.result("Failed: user doesn't exists");
                         ctx.status(500);
@@ -417,30 +417,33 @@ public class App
         }
     }
 
-    private static String confirmUserExist(String destName, String username) {
+    private static boolean confirmUserExist(String destName, String username) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_EXISTENCE_CHECK");
             if (function==null)
-                throw new RuntimeException("BAPI_USER_LOCK not found in SAP.");
+                throw new RuntimeException("BAPI_USER_EXISTENCE_CHECK not found in SAP.");
             function.getImportParameterList().setValue("USERNAME", username);
 
             function.execute(destination);
-            // This return is different than all other return in table.
+            // This return is different than all other return in table format used by other API call.
             JCoStructure returnStruct = function.getExportParameterList().getStructure("RETURN");
             char c = returnStruct.getChar("TYPE");
-            if (c == 'S') {
-                LOGGER.info("Return S, Use exists!!");
-            } else {
-                String errMessage = "Return type: " + c + " Message: " + returnStruct.getString("MESSAGE") + ". ";
-                LOGGER.error(errMessage);
-                return  errMessage;
+            String infoMessage =  returnStruct.getString("MESSAGE");
+            if (c != 'I') {
+                LOGGER.info("Unable to understand the return type: " + c);
+                return false;
             }
-            return "";
+            String expectedMsg = "User " + username + " exists";
+            if (infoMessage.toLowerCase().contains(expectedMsg.toLowerCase())) {
+                return true;
+            }
+            LOGGER.info("The info message for checking user " + username + " is: " + infoMessage);
+            return false;
         } catch (JCoException e) {
             LOGGER.error("lock user " + username + " to " + destName + " failed.");
             e.printStackTrace();
-            return e.toString();
+            return false;
         }
     }
 
