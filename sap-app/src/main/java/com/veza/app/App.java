@@ -279,10 +279,19 @@ public class App
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
                     boolean exists = confirmUserExist(request.server.host, request.username);
-                    LOGGER.info("!!!!!! user exist ok or not? " + exists);
                     if (!exists) {
-                        LOGGER.error("Get User Detail Failed");
+                        LOGGER.error("Get User Detail Failed because user " + request.username + " doesn't exists.");
                         ctx.result("Failed: user doesn't exists");
+                        ctx.status(500);
+                        return;
+                    }
+                    // Remove it, this is just for testing.
+                    Map<String, String> parametersMap = new HashMap<>();
+                    parametersMap.put("WLC", "S");
+                    String message = modifyUserLicenseTypeAndParameters(request.server.host, request.username, "91", parametersMap);
+                    if (!"".equals(message)) {
+                        LOGGER.error("Modify user " + request.username + " failed." + message);
+                        ctx.result("Modify user failed");
                         ctx.status(500);
                         return;
                     }
@@ -417,6 +426,34 @@ public class App
         }
     }
 
+    private static String modifyUserLicenseTypeAndParameters(String destName, String username, String licenseType, Map<String, String> parametersMap) {
+        try {
+            JCoDestination destination=JCoDestinationManager.getDestination(destName);
+            JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CHANGE");
+            if (function==null)
+                throw new RuntimeException("BAPI_USER_CHANGE not found in SAP.");
+            function.getImportParameterList().setValue("USERNAME", username);
+            if (licenseType.length() > 0) {
+                JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
+                uClass.setValue("LIC_TYPE", licenseType);
+            }
+            if (parametersMap != null && parametersMap.size() > 0) {
+                JCoTable parameters=function.getTableParameterList().getTable("PARAMETER");
+                for (String key : parametersMap.keySet()) {
+                    parameters.appendRow();
+                    parameters.setValue("PARID", key);
+                    parameters.setValue("PARVA", parametersMap.get(key));
+                }
+            }
+            function.execute(destination);
+            return processFunctionReturn(function);
+        } catch (JCoException e) {
+            LOGGER.error("lock user " + username + " to " + destName + " failed.");
+            e.printStackTrace();
+            return e.toString();
+        }
+    }
+
     private static boolean confirmUserExist(String destName, String username) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
@@ -441,14 +478,14 @@ public class App
             LOGGER.info("The info message for checking user " + username + " is: " + infoMessage);
             return false;
         } catch (JCoException e) {
-            LOGGER.error("lock user " + username + " to " + destName + " failed.");
+            LOGGER.error("confirm user " + username + " at " + destName + " failed.");
             e.printStackTrace();
             return false;
         }
     }
 
     // This is a helper func to print a user detail structure (whatever needed for debug)
-    private static Boolean getUserDetail(String destName, String username) {
+    private static boolean getUserDetail(String destName, String username) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_GET_DETAIL");
@@ -471,6 +508,7 @@ public class App
                 String parText = parameters.getString("PARTXT");
                 LOGGER.info("parID: " + parID +", parValue: " + parValue + ", parText: " + parText);
             }
+            return true;
         } catch (JCoException e) {
             LOGGER.error("get user detail of " + username + " to " + destName + " failed.");
             e.printStackTrace();
