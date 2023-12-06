@@ -426,7 +426,17 @@ public class App
             function.getImportParameterList().setValue("USERNAME", username);
 
             function.execute(destination);
-            return processFunctionReturn(function);
+            // This return is different than all other return in table.
+            JCoStructure returnStruct = function.getExportParameterList().getStructure("RETURN");
+            char c = returnStruct.getChar("TYPE");
+            if (c == 'S') {
+                LOGGER.info("Return S, Use exists!!");
+            } else {
+                String errMessage = "Return type: " + c + " Message: " + returnStruct.getString("MESSAGE") + ". ";
+                LOGGER.error(errMessage);
+                return  errMessage;
+            }
+            return "";
         } catch (JCoException e) {
             LOGGER.error("lock user " + username + " to " + destName + " failed.");
             e.printStackTrace();
