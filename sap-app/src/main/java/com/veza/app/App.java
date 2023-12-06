@@ -286,7 +286,7 @@ public class App
                         return;
                     }
                     // Remove it, this is just for testing.
-                    Map<String, String> parametersMap = new HashMap<>();
+                    /*Map<String, String> parametersMap = new HashMap<>();
                     parametersMap.put("WLC", "S");
                     String message = modifyUserLicenseTypeAndParameters(request.server.host, request.username, "91", parametersMap);
                     if (!"".equals(message)) {
@@ -294,7 +294,7 @@ public class App
                         ctx.result("Modify user failed");
                         ctx.status(500);
                         return;
-                    }
+                    }*/
                     if (getUserDetail(request.server.host, request.username)) {
                         LOGGER.info("Get user detail OK");
 		                ctx.result("{}");
@@ -530,7 +530,7 @@ public class App
             }
             Date userValidToDate = logonData.getDate("GLTGB");
             if (userValidToDate != null) {
-                LOGGER.info("User valid to " + dateFormat.format(userValidFromDate));
+                LOGGER.info("User valid to " + dateFormat.format(userValidToDate));
             } else {
                 LOGGER.info("User valid to field is empty");
             }
