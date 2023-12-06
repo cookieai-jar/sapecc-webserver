@@ -433,9 +433,15 @@ public class App
             if (function==null)
                 throw new RuntimeException("BAPI_USER_CHANGE not found in SAP.");
             function.getImportParameterList().setValue("USERNAME", username);
+            LOGGER.info("Update the user's license type and parameters");
             if (licenseType.length() > 0) {
+                LOGGER.info("Set the license type " + licenseType);
                 JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
                 uClass.setValue("LIC_TYPE", licenseType);
+                // Add the change indicator for uclass
+                JCoStructure uClassX = function.getImportParameterList().getStructure("UCLASSX");
+                uClassX.setValue("UCLASS", 'X');
+                // uClassX.setValue("UCLASSSYS", 'R');
             }
             if (parametersMap != null && parametersMap.size() > 0) {
                 JCoTable parameters=function.getTableParameterList().getTable("PARAMETER");
@@ -443,7 +449,13 @@ public class App
                     parameters.appendRow();
                     parameters.setValue("PARID", key);
                     parameters.setValue("PARVA", parametersMap.get(key));
+                    LOGGER.info("Set the parameters type key:" + key + " va:" + parametersMap.get(key));
                 }
+                // Add change indicator for parameters
+                // JCoStructure parameterX = function.getImportParameterList().getStructure("PARAMETERX");
+                // parameterX.setValue("UCLASS", 'X');
+                // uClassX.setValue("UCLASSSYS", 'R');
+
             }
             function.execute(destination);
             return processFunctionReturn(function);
