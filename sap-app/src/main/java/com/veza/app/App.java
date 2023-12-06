@@ -534,6 +534,12 @@ public class App
             } else {
                 LOGGER.info("User valid to field is empty");
             }
+            char usType = logonData.getChar("USTYP");
+            LOGGER.info("USTYP:" + usType);
+            char codvc = logonData.getChar("CODVC");
+            LOGGER.info("CODVC:" + codvc);
+            char codvn = logonData.getChar("CODVN");
+            LOGGER.info("CODVN:" + codvn);
 
             // Print its table of parameters
             JCoTable parameters=function.getTableParameterList().getTable("PARAMETER");
