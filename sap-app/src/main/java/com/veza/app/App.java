@@ -354,7 +354,7 @@ public class App
                         return;
                     }
                     // Remove it, this is just for testing.
-                    Map<String, String> parametersMap = new HashMap<>();
+                    /*Map<String, String> parametersMap = new HashMap<>();
                     parametersMap.put("WLC", "S");
                     String message = modifyUser(request.server.host, request.username, "firstname", "lastname", "depart", "func", "email","91", parametersMap, true);
                     if (!"".equals(message)) {
@@ -362,7 +362,7 @@ public class App
                         ctx.result("Modify user failed");
                         ctx.status(500);
                         return;
-                    }
+                    }*/
                     if (getUserDetail(request.server.host, request.username)) {
                         LOGGER.info("Get user detail OK");
 		                ctx.result("{}");
