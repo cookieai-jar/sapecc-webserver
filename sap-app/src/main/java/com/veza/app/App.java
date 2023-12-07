@@ -296,7 +296,16 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
-                    String message = lockUser(request.server.host, request.username);
+                    // First remove all activity groups from current user
+                    String message = addUserGroupToUser(request.server.host, request.username, null);
+                    if (!"".equals(message)) {
+                    {
+                        LOGGER.error("Lock Failed, Unable to remove all roles from a user");
+                        ctx.result("Failed with message :" + message);
+                        ctx.status(500);
+                        return;
+                    }
+                    message = lockUser(request.server.host, request.username);
                     if ("".equals(message)) {
                         LOGGER.info("Lock user OK");
 		                ctx.result("{}");
@@ -462,14 +471,16 @@ public class App
                 groups.setValue("FROM_DAT", existingGroups.getDate("FROM_DAT"));
                 groups.setValue("TO_DAT", existingGroups.getDate("TO_DAT"));
             }*/
-            for (int j=0;j<newGroups.length;j++) {
-                groups.appendRow();
-                groups.setValue("AGR_NAME", newGroups[j].group);
-                if (newGroups[j].fromDate != null) {
-                    groups.setValue("FROM_DAT", newGroups[j].fromDate);
-                }
-                if (newGroups[j].toDate != null) {
-                    groups.setValue("TO_DAT", newGroups[j].toDate);
+            if (newGroups != null) {
+                for (int j=0;j<newGroups.length;j++) {
+                    groups.appendRow();
+                    groups.setValue("AGR_NAME", newGroups[j].group);
+                    if (newGroups[j].fromDate != null) {
+                        groups.setValue("FROM_DAT", newGroups[j].fromDate);
+                    }
+                    if (newGroups[j].toDate != null) {
+                        groups.setValue("TO_DAT", newGroups[j].toDate);
+                    }
                 }
             }
             function.getImportParameterList().setValue("USERNAME", username);
@@ -540,8 +551,14 @@ public class App
                 logonDataX.setValue("CODVC", 'X');
                 logonDataX.setValue("CODVN", 'X');
             } else if (deactivatePassword != null && !deactivatePassword) {
-                // TODO, know how to disable the deactivatePassword
-                 LOGGER.info("Not to deactivate Password");
+                LOGGER.info("Not to deactivate Password");
+                JCoStructure logonData = function.getImportParameterList().getStructure("LOGONDATA");
+                logonData.setValue("CODVC", 'F');
+                logonData.setValue("CODVN", 'B');
+                // Add the change indicator for LOGONDATA
+                JCoStructure logonDataX = function.getImportParameterList().getStructure("LOGONDATAX");
+                logonDataX.setValue("CODVC", 'X');
+                logonDataX.setValue("CODVN", 'X');
             }
 
             if (notEmptyString(firstname) || notEmptyString(lastname) || notEmptyString(functionStr) || notEmptyString(department) || notEmptyString(email)) {

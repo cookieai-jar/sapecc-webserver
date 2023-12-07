@@ -32,13 +32,17 @@ type SapEccLockUserRequest struct {
 }
 
 type SapEccCreateUserRequest struct {
-	Server      SapEccServer      `json:"server"`
-	Username    string            `json:"username"`
-	Password    string            `json:"password"`
-	Firstname   string            `json:"firstname"`
-	Lastname    string            `json:"lastname"`
-	LicenseType string            `json:"licenseType"`
-	Parameters  map[string]string `json:"parameters"`
+	Server             SapEccServer      `json:"server"`
+	Username           string            `json:"username"`
+	Password           string            `json:"password"`
+	Firstname          string            `json:"firstname"`
+	Lastname           string            `json:"lastname"`
+	LicenseType        string            `json:"licenseType"`
+	Department         string            `json:"department"`
+	Function           string            `json:"function"`
+	Email              string            `json:"email"`
+	DeactivatePassword bool              `json:"deactivatePassword"`
+	Parameters         map[string]string `json:"parameters"`
 }
 
 // This is the Role of SAP.
