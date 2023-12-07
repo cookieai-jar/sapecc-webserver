@@ -30,7 +30,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Dec 2023 Buid v1";
+    public static final String version = "Dec 2023 Build v1.1";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
 
     SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
@@ -58,6 +58,7 @@ public class App
         PingHandler pingHandler = new PingHandler();
         LockHandler lockHandler = new LockHandler();
         CreateUserHandler createUserHandler = new CreateUserHandler();
+        SyncUserHandler syncUserHandler = new SyncUserHandler();
         AssignGroupHandler assignGroupHandler = new AssignGroupHandler();
         GetUserDetailHandler getUserDetailHandler = new GetUserDetailHandler();
 
@@ -70,6 +71,7 @@ public class App
             .post("/ping", pingHandler)
             .post("/lock", lockHandler)
 	        .post("/create_user", createUserHandler)
+            .post("/sync_user", syncUserHandler)
 	        .post("/assign_groups", assignGroupHandler)
             .post("/user_detail", getUserDetailHandler)
 	        .start();
@@ -108,7 +110,7 @@ public class App
                     return;
                 }
                 synchronized(memoryProvider) {
-                    memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromUI(sapServer));
+                    memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
                     String message = pingDestination(sapServer.host);
                     if ("".equals(message)) {
                         LOGGER.info("Ping OK");
@@ -150,9 +152,9 @@ public class App
                     return;
                 }
                 synchronized(memoryProvider) {
-                    memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromUI(sapUser.server));
-                    String message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname,
-                        sapUser.lastname, sapUser.licenseType, sapUser.parameters);
+                    memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromStruct(sapUser.server));
+                    String message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
+                        sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.parameters, sapUser.deactivatePassword);
                     if ("".equals(message)) {
                         LOGGER.info("Create User OK");
                         ctx.result("{}");
@@ -167,6 +169,64 @@ public class App
                 }
             } catch (Exception exception) {
                 LOGGER.error("Failed to create user:" + exception.toString());
+                ctx.status(500);
+                ctx.result(exception.getMessage());
+                throw new Error(exception);
+            }
+        }
+    }
+
+    private static class SyncUserHandler implements Handler {
+        @Override
+        public void handle(Context ctx) {
+            String body = ctx.body();
+            try {
+                SapCreateUserRequest sapUser = mapper.readValue(body, SapCreateUserRequest.class);
+                if (sapUser.server.host.isEmpty() || sapUser.server.client.isEmpty() || sapUser.server.jcoPassword.isEmpty()
+                    || sapUser.server.jcoUser.isEmpty() || sapUser.server.systemNumber.isEmpty() ) {
+                    // This is invalid input
+                    ctx.result("Invalid sap instance, missing at least one of host,client,systemNumber,jcoUser or jcoPassword");
+                    ctx.status(400);
+                    return;
+                }
+                LOGGER.info(getCurrentTimeString() +": Sync User " + sapUser);
+                if (sapUser.server.isTestingServer) {
+                    ctx.status(200);
+                    return;
+                }
+                synchronized(memoryProvider) {
+                    Boolean userExisted = confirmUserExist(sapUser.server.host, sapUser.username);
+                    if (userExisted == null) {
+                        String errMsg = "Unable to determine if user " + sapUser.username +" existsed or not";
+                        LOGGER.error(errMsg);
+                        ctx.status(500);
+                        ctx.result(errMsg);
+                        return;
+                    }
+                    String message = "";
+                    if (userExisted) {
+                        LOGGER.info("User "+ sapUser.username +" is existed, modify user");
+                        message = modifyUser(sapUser.server.host, sapUser.username, sapUser.firstname, sapUser.lastname,
+                            sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.parameters, sapUser.deactivatePassword);
+                    } else {
+                        LOGGER.info("User "+ sapUser.username +" does not existed, modify user");
+                        // TODO: verify we have the enough parameters like firstname/lastname, password
+                        message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
+                            sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.parameters, sapUser.deactivatePassword);
+                    }
+                    if ("".equals(message)) {
+                        LOGGER.info("Sync User OK");
+                        ctx.result("{}");
+                        ctx.status(200);
+                        return;
+                    } else {
+                        LOGGER.error("Sync User Failed");
+                        ctx.result("Failed with message :" + message);
+                        ctx.status(500);
+                    }
+                }
+            } catch (Exception exception) {
+                LOGGER.error("Failed to sync user:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
@@ -193,7 +253,7 @@ public class App
                     return;
                 }
                 synchronized(memoryProvider) {
-                    memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
+                    memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
                     String message = addUserGroupToUser(request.server.host, request.username, request.userGroups);
                     if ("".equals(message)) {
                         LOGGER.info("Assign group to user OK!");
@@ -235,7 +295,7 @@ public class App
                     return;
                 }
                 synchronized(memoryProvider) {
-                    memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
+                    memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
                     String message = lockUser(request.server.host, request.username);
                     if ("".equals(message)) {
                         LOGGER.info("Lock user OK");
@@ -277,18 +337,18 @@ public class App
                     return;
                 }
                 synchronized(memoryProvider) {
-                    memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromUI(request.server));
-                    boolean exists = confirmUserExist(request.server.host, request.username);
-                    if (!exists) {
+                    memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
+                    Boolean exists = confirmUserExist(request.server.host, request.username);
+                    if (exists == null || !exists) {
                         LOGGER.error("Get User Detail Failed because user " + request.username + " doesn't exists.");
                         ctx.result("Failed: user doesn't exists");
                         ctx.status(500);
                         return;
                     }
                     // Remove it, this is just for testing.
-                    // Map<String, String> parametersMap = new HashMap<>();
-                    // parametersMap.put("WLC", "S");
-                    String message = modifyUserLicenseTypeAndParameters(request.server.host, request.username, "", null, true);
+                    Map<String, String> parametersMap = new HashMap<>();
+                    parametersMap.put("WLC", "S");
+                    String message = modifyUser(request.server.host, request.username, "firstname", "lastname", "depart", "func", "email","91", parametersMap, true);
                     if (!"".equals(message)) {
                         LOGGER.error("Modify user " + request.username + " failed." + message);
                         ctx.result("Modify user failed");
@@ -328,7 +388,7 @@ public class App
     }
 
     private static String createUser(String destName, String username, String password, String firstName, String lastName,
-        String licenseType, Map<String, String> parametersMap) {
+        String department, String functionStr, String email, String licenseType, Map<String, String> parametersMap, Boolean deactivatePassword) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CREATE1");
@@ -339,9 +399,18 @@ public class App
             JCoStructure addressData = function.getImportParameterList().getStructure("ADDRESS");
             addressData.setValue("LASTNAME", lastName);
             addressData.setValue("FIRSTNAME", firstName);
+            if (notEmptyString(functionStr)) {
+                addressData.setValue("FUNCTION", functionStr);
+            }
+            if (notEmptyString(department)) {
+                addressData.setValue("DEPARTMENT", department);
+            }
+            if (notEmptyString(email)) {
+                addressData.setValue("E_MAIL", email);
+            }
             JCoStructure passwordData = function.getImportParameterList().getStructure("PASSWORD");        
             passwordData.setValue("BAPIPWD", password);
-            if (licenseType.length() > 0) {
+            if (notEmptyString(licenseType)) {
                 JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
                 uClass.setValue("LIC_TYPE", licenseType);
             }
@@ -353,6 +422,12 @@ public class App
                     parameters.setValue("PARID", key);
                     parameters.setValue("PARVA", parametersMap.get(key));
                 }
+            }
+
+            if (deactivatePassword != null && deactivatePassword) {
+                JCoStructure logonData = function.getImportParameterList().getStructure("LOGONDATA");
+                logonData.setValue("CODVC", 'X');
+                logonData.setValue("CODVN", 'X');
             }
 
             function.execute(destination);
@@ -367,19 +442,18 @@ public class App
     private static String addUserGroupToUser(String destName, String username, UserGroup[] newGroups) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
-            JCoFunction functionExisting=destination.getRepository().getFunction("BAPI_USER_GET_DETAIL");
+            /*JCoFunction functionExisting=destination.getRepository().getFunction("BAPI_USER_GET_DETAIL");
             if (functionExisting==null)
                 throw new RuntimeException("BAPI_USER_GET_DETAIL not found in SAP.");
             functionExisting.getImportParameterList().setValue("USERNAME", username);
-        
-            functionExisting.execute(destination);
+            functionExisting.execute(destination); */
 
             JCoFunction function = destination.getRepository().getFunction("BAPI_USER_ACTGROUPS_ASSIGN");
             if (function==null)
                 throw new RuntimeException("BAPI_USER_ACTGROUPS_ASSIGN not found in SAP.");
             JCoTable groups=function.getTableParameterList().getTable("ACTIVITYGROUPS");
 
-            JCoTable existingGroups=functionExisting.getTableParameterList().getTable("ACTIVITYGROUPS");
+            /*JCoTable existingGroups=functionExisting.getTableParameterList().getTable("ACTIVITYGROUPS");
             for (int i=0; i<existingGroups.getNumRows(); i++)
             {
                 existingGroups.setRow(i);
@@ -387,7 +461,7 @@ public class App
                 groups.setValue("AGR_NAME", existingGroups.getString("AGR_NAME"));
                 groups.setValue("FROM_DAT", existingGroups.getDate("FROM_DAT"));
                 groups.setValue("TO_DAT", existingGroups.getDate("TO_DAT"));
-            }
+            }*/
             for (int j=0;j<newGroups.length;j++) {
                 groups.appendRow();
                 groups.setValue("AGR_NAME", newGroups[j].group);
@@ -426,7 +500,8 @@ public class App
         }
     }
 
-    private static String modifyUserLicenseTypeAndParameters(String destName, String username, String licenseType, Map<String, String> parametersMap, boolean deactivatePassword) {
+    private static String modifyUser(String destName, String username, String firstname, String lastname, String department, String functionStr, String email,
+        String licenseType, Map<String, String> parametersMap, Boolean deactivatePassword) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CHANGE");
@@ -434,7 +509,7 @@ public class App
                 throw new RuntimeException("BAPI_USER_CHANGE not found in SAP.");
             function.getImportParameterList().setValue("USERNAME", username);
             LOGGER.info("Update the user's license type and parameters");
-            if (licenseType.length() > 0) {
+            if (notEmptyString(licenseType)) {
                 LOGGER.info("Set the license type " + licenseType);
                 JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
                 uClass.setValue("LIC_TYPE", licenseType);
@@ -456,8 +531,7 @@ public class App
                 parameterX.setValue("PARID", 'X');
                 parameterX.setValue("PARVA", 'X');
             }
-            if (deactivatePassword) {
-                LOGGER.info("Try to deactivate Password");
+            if (deactivatePassword != null && deactivatePassword) {
                 JCoStructure logonData = function.getImportParameterList().getStructure("LOGONDATA");
                 logonData.setValue("CODVC", 'X');
                 logonData.setValue("CODVN", 'X');
@@ -465,7 +539,36 @@ public class App
                 JCoStructure logonDataX = function.getImportParameterList().getStructure("LOGONDATAX");
                 logonDataX.setValue("CODVC", 'X');
                 logonDataX.setValue("CODVN", 'X');
+            } else if (deactivatePassword != null && !deactivatePassword) {
+                // TODO, know how to disable the deactivatePassword
+                 LOGGER.info("Not to deactivate Password");
             }
+
+            if (notEmptyString(firstname) || notEmptyString(lastname) || notEmptyString(functionStr) || notEmptyString(department) || notEmptyString(email)) {
+                JCoStructure address = function.getImportParameterList().getStructure("ADDRESS");
+                JCoStructure addressX = function.getImportParameterList().getStructure("ADDRESSX");
+                if (notEmptyString(firstname)) {
+                    address.setValue("FIRSTNAME", firstname);
+                    addressX.setValue("FIRSTNAME", 'X');
+                }
+                if (notEmptyString(lastname)) {
+                    address.setValue("LASTNAME", firstname);
+                    addressX.setValue("LASTNAME", 'X');
+                }
+                if (notEmptyString(functionStr)) {
+                    address.setValue("FUNCTION", functionStr);
+                    addressX.setValue("FUNCTION", 'X');
+                }
+                if (notEmptyString(department)) {
+                    address.setValue("DEPARTMENT", department);
+                    addressX.setValue("DEPARTMENT", 'X');
+                }
+                if (notEmptyString(email)) {
+                    address.setValue("E_MAIL", email);
+                    addressX.setValue("E_MAIL", 'X');
+                }
+            }
+
             function.execute(destination);
             return processFunctionReturn(function);
         } catch (JCoException e) {
@@ -475,7 +578,7 @@ public class App
         }
     }
 
-    private static boolean confirmUserExist(String destName, String username) {
+    private static Boolean confirmUserExist(String destName, String username) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_EXISTENCE_CHECK");
@@ -490,7 +593,7 @@ public class App
             String infoMessage =  returnStruct.getString("MESSAGE");
             if (c != 'I') {
                 LOGGER.info("Unable to understand the return type: " + c);
-                return false;
+                return null;
             }
             String expectedMsg = "User " + username + " exists";
             if (infoMessage.toLowerCase().contains(expectedMsg.toLowerCase())) {
@@ -501,7 +604,7 @@ public class App
         } catch (JCoException e) {
             LOGGER.error("confirm user " + username + " at " + destName + " failed.");
             e.printStackTrace();
-            return false;
+            return null;
         }
     }
 
@@ -585,7 +688,7 @@ public class App
         return returnErrorMessage;
     }
     
-    private static Properties getDestinationPropertiesFromUI(SapServer sap)
+    private static Properties getDestinationPropertiesFromStruct(SapServer sap)
     {
         // adapt parameters in order to configure a valid destination
         Properties connectProperties=new Properties();
@@ -678,14 +781,23 @@ public class App
         public String password;
         public String firstname;
         public String lastname;
+        public String department;
+        public String function;
+        public String email;
         public String licenseType;
         public Map<String, String> parameters;
+        public Boolean deactivatePassword;
 
         @Override
         public String toString() {
             return "{server="+server.toString()+", username="+username+", firstName="+firstname+", lastName="+lastname
-                   +", licenseType="+licenseType+", paramters="+parameters+"}";
+                   +", department="+department+", function="+function+", email="+email+", licenseType="+licenseType+", deativatePassword="+deactivatePassword+", paramters="+parameters+"}";
         }
+    }
+
+    public static boolean notEmptyString( final String s ) {
+        // Null-safe, short-circuit evaluation.
+        return s != null && s.trim().length()>0;
     }
 
     private static class InMemoryDestinationDataProvider implements DestinationDataProvider
