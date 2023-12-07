@@ -286,15 +286,15 @@ public class App
                         return;
                     }
                     // Remove it, this is just for testing.
-                    /*Map<String, String> parametersMap = new HashMap<>();
-                    parametersMap.put("WLC", "S");
-                    String message = modifyUserLicenseTypeAndParameters(request.server.host, request.username, "91", parametersMap);
+                    // Map<String, String> parametersMap = new HashMap<>();
+                    // parametersMap.put("WLC", "S");
+                    String message = modifyUserLicenseTypeAndParameters(request.server.host, request.username, "", null, true);
                     if (!"".equals(message)) {
                         LOGGER.error("Modify user " + request.username + " failed." + message);
                         ctx.result("Modify user failed");
                         ctx.status(500);
                         return;
-                    }*/
+                    }
                     if (getUserDetail(request.server.host, request.username)) {
                         LOGGER.info("Get user detail OK");
 		                ctx.result("{}");
@@ -426,7 +426,7 @@ public class App
         }
     }
 
-    private static String modifyUserLicenseTypeAndParameters(String destName, String username, String licenseType, Map<String, String> parametersMap) {
+    private static String modifyUserLicenseTypeAndParameters(String destName, String username, String licenseType, Map<String, String> parametersMap, boolean deactivatePassword) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CHANGE");
@@ -455,7 +455,16 @@ public class App
                 JCoStructure parameterX = function.getImportParameterList().getStructure("PARAMETERX");
                 parameterX.setValue("PARID", 'X');
                 parameterX.setValue("PARVA", 'X');
-
+            }
+            if (deactivatePassword) {
+                LOGGER.info("Try to deactivate Password");
+                JCoStructure logonData = function.getImportParameterList().getStructure("LOGONDATA");
+                logonData.setValue("CODVC", 'X');
+                logonData.setValue("CODVN", 'X');
+                // Add the change indicator for LOGONDATA
+                JCoStructure logonDataX = function.getImportParameterList().getStructure("LOGONDATAX");
+                logonDataX.setValue("CODVC", 'X');
+                logonDataX.setValue("CODVN", 'X');
             }
             function.execute(destination);
             return processFunctionReturn(function);
