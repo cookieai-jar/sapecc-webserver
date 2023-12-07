@@ -41,8 +41,8 @@ type SapEccCreateUserRequest struct {
 	Department         string            `json:"department"`
 	Function           string            `json:"function"`
 	Email              string            `json:"email"`
-	DeactivatePassword bool              `json:"deactivatePassword"`
-	Parameters         map[string]string `json:"parameters"`
+	DeactivatePassword bool              `json:"deactivatePassword,omitempty"`
+	Parameters         map[string]string `json:"parameters,omitempty"`
 }
 
 // This is the Role of SAP.
