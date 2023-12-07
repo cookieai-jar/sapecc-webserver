@@ -299,7 +299,6 @@ public class App
                     // First remove all activity groups from current user
                     String message = addUserGroupToUser(request.server.host, request.username, null);
                     if (!"".equals(message)) {
-                    {
                         LOGGER.error("Lock Failed, Unable to remove all roles from a user");
                         ctx.result("Failed with message :" + message);
                         ctx.status(500);
