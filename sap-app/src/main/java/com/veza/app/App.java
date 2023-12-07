@@ -209,7 +209,7 @@ public class App
                         message = modifyUser(sapUser.server.host, sapUser.username, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.parameters, sapUser.deactivatePassword);
                     } else {
-                        LOGGER.info("User "+ sapUser.username +" does not existed, modify user");
+                        LOGGER.info("User "+ sapUser.username +" does not existed, create user");
                         // TODO: verify we have the enough parameters like firstname/lastname, password
                         message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.parameters, sapUser.deactivatePassword);
@@ -297,7 +297,7 @@ public class App
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
                     // First remove all activity groups from current user
-                    String message = addUserGroupToUser(request.server.host, request.username, null);
+                    String message = removeParameterAndLicenseTypeAndGroups(request.server.host, request.username);
                     if (!"".equals(message)) {
                         LOGGER.error("Lock Failed, Unable to remove all roles from a user");
                         ctx.result("Failed with message :" + message);
@@ -510,6 +510,47 @@ public class App
         }
     }
 
+    private static String removeParameterAndLicenseTypeAndGroups(String destName, String username) {
+        try {
+            // Remove all groups from user
+            LOGGER.info("Remove all roles from user " + username);
+            JCoDestination destination=JCoDestinationManager.getDestination(destName);
+            JCoFunction function1 = destination.getRepository().getFunction("BAPI_USER_ACTGROUPS_ASSIGN");
+            if (function1==null)
+                throw new RuntimeException("BAPI_USER_ACTGROUPS_ASSIGN not found in SAP.");
+            JCoTable groups=function1.getTableParameterList().getTable("ACTIVITYGROUPS");
+            function1.getImportParameterList().setValue("USERNAME", username);
+            function1.execute(destination);
+            String message1 = processFunctionReturn(function1);
+            if (!"".equals(message1)) {
+                LOGGER.info("Unable to remove the roles from user " + username + " error: " + message1);
+                return message1;
+            }
+
+            LOGGER.info("Remove liense type and parameters from user " + username);
+            JCoFunction function2 = destination.getRepository().getFunction("BAPI_USER_CHANGE");
+            if (function2==null)
+                throw new RuntimeException("BAPI_USER_CHANGE not found in SAP.");
+            function2.getImportParameterList().setValue("USERNAME", username);
+            JCoStructure uClass = function2.getImportParameterList().getStructure("UCLASS");
+            uClass.setValue("LIC_TYPE", "");
+            // Add the change indicator for uclass
+            JCoStructure uClassX = function2.getImportParameterList().getStructure("UCLASSX");
+            uClassX.setValue("UCLASS", 'X');
+            JCoTable parameters=function2.getTableParameterList().getTable("PARAMETER");
+            // Add change indicator for parameters
+            JCoStructure parameterX = function2.getImportParameterList().getStructure("PARAMETERX");
+            parameterX.setValue("PARID", 'X');
+            parameterX.setValue("PARVA", 'X');
+            function2.execute(destination);
+            return processFunctionReturn(function2);
+        } catch (JCoException e) {
+            LOGGER.error("lock user " + username + " to " + destName + " failed.");
+            e.printStackTrace();
+            return e.toString();
+        }
+    }
+
     private static String modifyUser(String destName, String username, String firstname, String lastname, String department, String functionStr, String email,
         String licenseType, Map<String, String> parametersMap, Boolean deactivatePassword) {
         try {
@@ -518,9 +559,7 @@ public class App
             if (function==null)
                 throw new RuntimeException("BAPI_USER_CHANGE not found in SAP.");
             function.getImportParameterList().setValue("USERNAME", username);
-            LOGGER.info("Update the user's license type and parameters");
             if (notEmptyString(licenseType)) {
-                LOGGER.info("Set the license type " + licenseType);
                 JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
                 uClass.setValue("LIC_TYPE", licenseType);
                 // Add the change indicator for uclass
