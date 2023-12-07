@@ -206,7 +206,7 @@ public class App
                     String message = "";
                     if (userExisted) {
                         LOGGER.info("User "+ sapUser.username +" is existed, modify user");
-                        message = modifyUser(sapUser.server.host, sapUser.username, sapUser.firstname, sapUser.lastname,
+                        message = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.parameters, sapUser.deactivatePassword);
                     } else {
                         LOGGER.info("User "+ sapUser.username +" does not existed, create user");
@@ -551,7 +551,7 @@ public class App
         }
     }
 
-    private static String modifyUser(String destName, String username, String firstname, String lastname, String department, String functionStr, String email,
+    private static String modifyUser(String destName, String username, String password, String firstname, String lastname, String department, String functionStr, String email,
         String licenseType, Map<String, String> parametersMap, Boolean deactivatePassword) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
@@ -588,7 +588,7 @@ public class App
                 JCoStructure logonDataX = function.getImportParameterList().getStructure("LOGONDATAX");
                 logonDataX.setValue("CODVC", 'X');
                 logonDataX.setValue("CODVN", 'X');
-            } else if (deactivatePassword != null && !deactivatePassword) {
+            } else if (deactivatePassword != null && !deactivatePassword && notEmptyString(password)) {
                 LOGGER.info("Not to deactivate Password");
                 JCoStructure logonData = function.getImportParameterList().getStructure("LOGONDATA");
                 logonData.setValue("CODVC", 'F');
@@ -597,6 +597,11 @@ public class App
                 JCoStructure logonDataX = function.getImportParameterList().getStructure("LOGONDATAX");
                 logonDataX.setValue("CODVC", 'X');
                 logonDataX.setValue("CODVN", 'X');
+                // Also set the new password
+                JCoStructure passwordData = function.getImportParameterList().getStructure("PASSWORD");
+                passwordData.setValue("BAPIPWD", password);
+                JCoStructure passwordDataX = function.getImportParameterList().getStructure("PASSWORDX");
+                passwordDataX.setValue("BAPIPWD", 'X');
             }
 
             if (notEmptyString(firstname) || notEmptyString(lastname) || notEmptyString(functionStr) || notEmptyString(department) || notEmptyString(email)) {
