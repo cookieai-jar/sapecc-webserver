@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -30,7 +31,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Dec 2023 Build v1.1";
+    public static final String version = "Dec 2023 Build v1.2";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
 
     SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
@@ -61,6 +62,7 @@ public class App
         SyncUserHandler syncUserHandler = new SyncUserHandler();
         AssignGroupHandler assignGroupHandler = new AssignGroupHandler();
         GetUserDetailHandler getUserDetailHandler = new GetUserDetailHandler();
+        ModifyUserHandler modifyUserHandler = new ModifyUserHandler();
 
         LOGGER.info("Start Javalin webserver ...");
         Javalin app = Javalin.create(config -> {
@@ -170,6 +172,50 @@ public class App
                 }
             } catch (Exception exception) {
                 LOGGER.error("Failed to create user:" + exception.toString());
+                ctx.status(500);
+                ctx.result(exception.getMessage());
+                throw new Error(exception);
+            }
+        }
+    }
+
+    private static class ModifyUserHandler implements Handler {
+        @Override
+        public void handle(Context ctx) {
+            String body = ctx.body();
+            try {
+                SapCreateUserRequest sapUser = mapper.readValue(body, SapCreateUserRequest.class);
+                if (sapUser.server.host.isEmpty() || sapUser.server.client.isEmpty() || sapUser.server.jcoPassword.isEmpty()
+                    || sapUser.server.jcoUser.isEmpty() || sapUser.server.systemNumber.isEmpty() ) {
+                    // This is invalid input
+                    ctx.result("Invalid sap instance, missing at least one of host,client,systemNumber,jcoUser or jcoPassword");
+                    ctx.status(400);
+                    return;
+                }
+                LOGGER.info(getCurrentTimeString() +": Create User " + sapUser);
+                if (sapUser.server.isTestingServer) {
+                    ctx.status(200);
+                    return;
+                }
+                synchronized(memoryProvider) {
+                    memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromStruct(sapUser.server));
+                    String message = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
+                        sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
+                        sapUser.parameters, sapUser.deactivatePassword);
+                    if ("".equals(message)) {
+                        LOGGER.info("Modify User OK");
+                        ctx.result("{}");
+                        ctx.status(200);
+                        return;
+                    } else {
+                        LOGGER.error("modify User Failed");
+                        ctx.result("Failed with message :" + message);
+                        ctx.status(500);
+                        return;
+                    }
+                }
+            } catch (Exception exception) {
+                LOGGER.error("Failed to modify user:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
@@ -356,19 +402,10 @@ public class App
                         ctx.status(500);
                         return;
                     }
-                    // Remove it, this is just for testing.
-                    /*Map<String, String> parametersMap = new HashMap<>();
-                    parametersMap.put("WLC", "S");
-                    String message = modifyUser(request.server.host, request.username, "firstname", "lastname", "depart", "func", "email","91", parametersMap, true);
-                    if (!"".equals(message)) {
-                        LOGGER.error("Modify user " + request.username + " failed." + message);
-                        ctx.result("Modify user failed");
-                        ctx.status(500);
-                        return;
-                    }*/
-                    if (getUserDetail(request.server.host, request.username)) {
+                    SapUserDetail userDetail = getUserDetail(request.server.host, request.username);
+                    if (userDetail != null) {
                         LOGGER.info("Get user detail OK");
-		                ctx.result("{}");
+		                ctx.result(userDetail.toString());
                         ctx.status(200);
                         return;
                     } else {
@@ -472,26 +509,11 @@ public class App
     private static String addUserGroupToUser(String destName, String username, UserGroup[] newGroups) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
-            /*JCoFunction functionExisting=destination.getRepository().getFunction("BAPI_USER_GET_DETAIL");
-            if (functionExisting==null)
-                throw new RuntimeException("BAPI_USER_GET_DETAIL not found in SAP.");
-            functionExisting.getImportParameterList().setValue("USERNAME", username);
-            functionExisting.execute(destination); */
-
             JCoFunction function = destination.getRepository().getFunction("BAPI_USER_ACTGROUPS_ASSIGN");
             if (function==null)
                 throw new RuntimeException("BAPI_USER_ACTGROUPS_ASSIGN not found in SAP.");
             JCoTable groups=function.getTableParameterList().getTable("ACTIVITYGROUPS");
 
-            /*JCoTable existingGroups=functionExisting.getTableParameterList().getTable("ACTIVITYGROUPS");
-            for (int i=0; i<existingGroups.getNumRows(); i++)
-            {
-                existingGroups.setRow(i);
-                groups.appendRow();
-                groups.setValue("AGR_NAME", existingGroups.getString("AGR_NAME"));
-                groups.setValue("FROM_DAT", existingGroups.getDate("FROM_DAT"));
-                groups.setValue("TO_DAT", existingGroups.getDate("TO_DAT"));
-            }*/
             if (newGroups != null) {
                 for (int j=0;j<newGroups.length;j++) {
                     groups.appendRow();
@@ -567,7 +589,7 @@ public class App
             function2.execute(destination);
             return processFunctionReturn(function2);
         } catch (JCoException e) {
-            LOGGER.error("lock user " + username + " to " + destName + " failed.");
+            LOGGER.error("remove user role/license_type and parameters for " + username + " at " + destName + " failed.");
             e.printStackTrace();
             return e.toString();
         }
@@ -709,65 +731,86 @@ public class App
     }
 
     // This is a helper func to print a user detail structure (whatever needed for debug)
-    private static boolean getUserDetail(String destName, String username) {
+    private static SapUserDetail getUserDetail(String destName, String username) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_GET_DETAIL");
             if (function==null)
                 throw new RuntimeException("BAPI_USER_GET_DETAIL not found in SAP.");
             function.getImportParameterList().setValue("USERNAME", username);
+            SapUserDetail result = new SapUserDetail();
+            result.username = username;
 
             function.execute(destination);
             // For a user, print out the license related structure.
             JCoStructure uClass = function.getExportParameterList().getStructure("UCLASS");
             String licType = uClass.getString("LIC_TYPE");
-            LOGGER.info("The lic type is " + licType);
+            result.licenseType = licType;
 
             // Function/Department/Email
             JCoStructure address = function.getExportParameterList().getStructure("ADDRESS");
-            String funStr = address.getString("FUNCTION");
-            LOGGER.info("The function is " + funStr);
+            String firstname = address.getString("FIRSTNAME");
+            result.firstname = firstname;
+            String lastname = address.getString("LASTNAEM");
+            result.lastname = lastname;
+            String funcStr = address.getString("FUNCTION");
+            result.function = funcStr;
             String departStr = address.getString("DEPARTMENT");
-            LOGGER.info("The department is " + departStr);
+            result.department = departStr;
             String emailStr = address.getString("E_MAIL");
-            LOGGER.info("The email is " + emailStr);
+            result.email = emailStr;
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
             JCoStructure logonData = function.getExportParameterList().getStructure("LOGONDATA");
             Date userValidFromDate = logonData.getDate("GLTGV");
             if (userValidFromDate != null) {
-                LOGGER.info("User valid from " + dateFormat.format(userValidFromDate));
-            } else {
-                LOGGER.info("User valid from field is empty");
+                result.validFrom = dateFormat.format(userValidFromDate);
             }
             Date userValidToDate = logonData.getDate("GLTGB");
             if (userValidToDate != null) {
-                LOGGER.info("User valid to " + dateFormat.format(userValidToDate));
-            } else {
-                LOGGER.info("User valid to field is empty");
+                result.validTo = dateFormat.format(userValidToDate);
             }
-            char usType = logonData.getChar("USTYP");
-            LOGGER.info("USTYP:" + usType);
             char codvc = logonData.getChar("CODVC");
             LOGGER.info("CODVC:" + codvc);
             char codvn = logonData.getChar("CODVN");
             LOGGER.info("CODVN:" + codvn);
+            if (codvc == 'X' && codvn == 'X') {
+                result.deactivatePassword = true;
+            }
 
+            Map<String, String> parametersMap = new HashMap<>();
             // Print its table of parameters
             JCoTable parameters=function.getTableParameterList().getTable("PARAMETER");
             for (int i=0;i<parameters.getNumRows(); i++) {
                 parameters.setRow(i);
                 String parID = parameters.getString("PARID");
                 String parValue = parameters.getString("PARVA");
-                String parText = parameters.getString("PARTXT");
-                LOGGER.info("parID: " + parID +", parValue: " + parValue + ", parText: " + parText);
+                // String parText = parameters.getString("PARTXT");
+                parametersMap.put(parID, parValue);
             }
-            return true;
+            result.parameters = parametersMap;
+
+            // Get roles
+            JCoTable existingGroups=function.getTableParameterList().getTable("ACTIVITYGROUPS");
+            int count = existingGroups.getNumRows();
+            UserGroup[] userGroups = new UserGroup[count];
+            for (int i=0; i<count; i++)
+            {
+                existingGroups.setRow(i);
+                String activityGroupName = existingGroups.getString("AGR_NAME");
+                Date fromDate = existingGroups.getDate("FROM_DAT");
+                Date toDate = existingGroups.getDate("TO_DAT");
+                userGroups[i].group = activityGroupName;
+                userGroups[i].fromDate = fromDate;
+                userGroups[i].toDate = toDate;
+            }
+            result.userGroups = userGroups;
+            return result;
         } catch (JCoException e) {
             LOGGER.error("get user detail of " + username + " to " + destName + " failed.");
             e.printStackTrace();
         }
-        return false;
+        return null;
     }
 
     private static String processFunctionReturn(JCoFunction function) {
@@ -895,6 +938,30 @@ public class App
             return "{server="+server.toString()+", username="+username+", firstName="+firstname+", lastName="+lastname
                    +", department="+department+", function="+function+", email="+email+", validFrom="+validFrom+", validTo="+validTo
                    +", licenseType="+licenseType+", deativatePassword="+deactivatePassword+", paramters="+parameters+"}";
+        }
+    }
+
+    private static class SapUserDetail {
+        public String username;
+        public String firstname;
+        public String lastname;
+        public String department;
+        public String function;
+        public String email;
+        public String licenseType;
+        public Map<String, String> parameters;
+        public Boolean deactivatePassword;
+        public String validFrom;
+        public String validTo;
+
+        public UserGroup[] userGroups;
+        public String toString() {
+            try {
+                return mapper.writeValueAsString(this);
+            } catch (JsonProcessingException ex) {
+                LOGGER.error("Unable to serialized");
+                return "{}";
+            }
         }
     }
 
