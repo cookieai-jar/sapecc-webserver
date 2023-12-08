@@ -38,10 +38,12 @@ type SapEccCreateUserRequest struct {
 	Firstname          string            `json:"firstname"`
 	Lastname           string            `json:"lastname"`
 	LicenseType        string            `json:"licenseType"`
-	Department         string            `json:"department"`
-	Function           string            `json:"function"`
-	Email              string            `json:"email"`
-	DeactivatePassword bool              `json:"deactivatePassword,omitempty"`
+	Department         string            `json:"department,omitempty"`
+	Function           string            `json:"function,omitempty"`
+	Email              string            `json:"email,omitempty"`
+	ValidFrom          string            `json:"validFrom,omitempty"`
+	ValidTo            string            `json:"validTo,omitempty"`
+	DeactivatePassword *bool             `json:"deactivatePassword,omitempty"`
 	Parameters         map[string]string `json:"parameters,omitempty"`
 }
 

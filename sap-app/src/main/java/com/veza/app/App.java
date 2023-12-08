@@ -154,7 +154,8 @@ public class App
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromStruct(sapUser.server));
                     String message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
-                        sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.parameters, sapUser.deactivatePassword);
+                        sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
+                        sapUser.parameters, sapUser.deactivatePassword);
                     if ("".equals(message)) {
                         LOGGER.info("Create User OK");
                         ctx.result("{}");
@@ -212,7 +213,8 @@ public class App
                         LOGGER.info("User "+ sapUser.username +" does not existed, create user");
                         // TODO: verify we have the enough parameters like firstname/lastname, password
                         message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
-                            sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.parameters, sapUser.deactivatePassword);
+                            sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
+                            sapUser.parameters, sapUser.deactivatePassword);
                     }
                     if ("".equals(message)) {
                         LOGGER.info("Sync User OK");
@@ -396,7 +398,7 @@ public class App
     }
 
     private static String createUser(String destName, String username, String password, String firstName, String lastName,
-        String department, String functionStr, String email, String licenseType, Map<String, String> parametersMap, Boolean deactivatePassword) {
+        String department, String functionStr, String email, String licenseType, String validFrom, String validTo, Map<String, String> parametersMap, Boolean deactivatePassword) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CREATE1");
@@ -432,10 +434,29 @@ public class App
                 }
             }
 
-            if (deactivatePassword != null && deactivatePassword) {
+            if ((deactivatePassword != null && deactivatePassword) || notEmptyString(validFrom) || notEmptyString(validTo)) {
                 JCoStructure logonData = function.getImportParameterList().getStructure("LOGONDATA");
-                logonData.setValue("CODVC", 'X');
-                logonData.setValue("CODVN", 'X');
+                if (deactivatePassword != null && deactivatePassword) {
+                    logonData.setValue("CODVC", 'X');
+                    logonData.setValue("CODVN", 'X');
+                }
+                SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
+                if (notEmptyString(validFrom)) {
+                    try {
+                        Date validFromDate = df.parse(validFrom);
+                        logonData.setValue("GLTGV", validFromDate);
+                    } catch (ParseException ex) {
+                        LOGGER.warn("Invalid format of valid from string: " + validFrom);
+                    }
+                }
+                if (notEmptyString(validTo)) {
+                    try {
+                        Date validToDate = df.parse(validTo);
+                        logonData.setValue("GLTGB", validToDate);
+                    } catch (ParseException ex) {
+                        LOGGER.warn("Invalid format of valid to string: " + validTo);
+                    }
+                }
             }
 
             function.execute(destination);
@@ -847,11 +868,14 @@ public class App
         public String licenseType;
         public Map<String, String> parameters;
         public Boolean deactivatePassword;
+        public String validFrom;
+        public String validTo;
 
         @Override
         public String toString() {
             return "{server="+server.toString()+", username="+username+", firstName="+firstname+", lastName="+lastname
-                   +", department="+department+", function="+function+", email="+email+", licenseType="+licenseType+", deativatePassword="+deactivatePassword+", paramters="+parameters+"}";
+                   +", department="+department+", function="+function+", email="+email+", validFrom="+validFrom+", validTo="+validTo
+                   +", licenseType="+licenseType+", deativatePassword="+deactivatePassword+", paramters="+parameters+"}";
         }
     }
 
