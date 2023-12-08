@@ -11,6 +11,7 @@ import io.javalin.community.ssl.SSLPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -788,7 +789,9 @@ public class App
                 // String parText = parameters.getString("PARTXT");
                 parametersMap.put(parID, parValue);
             }
-            result.parameters = parametersMap;
+            if (parametersMap.size() > 0) {
+                result.parameters = parametersMap;
+            }
 
             // Get roles
             JCoTable existingGroups=function.getTableParameterList().getTable("ACTIVITYGROUPS");
@@ -805,7 +808,9 @@ public class App
                 userGroups[i].fromDate = fromDate;
                 userGroups[i].toDate = toDate;
             }
-            result.userGroups = userGroups;
+            if (userGroups.length >0) {
+                result.userGroups = userGroups;
+            }
             return result;
         } catch (JCoException e) {
             LOGGER.error("get user detail of " + username + " to " + destName + " failed.");
@@ -958,6 +963,7 @@ public class App
         public UserGroup[] userGroups;
         public String toString() {
             try {
+                mapper.setSerializationInclusion(Include.NON_NULL);
                 return mapper.writeValueAsString(this);
             } catch (JsonProcessingException ex) {
                 LOGGER.error("Unable to serialized");
