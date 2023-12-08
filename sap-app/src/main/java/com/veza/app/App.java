@@ -751,7 +751,7 @@ public class App
             JCoStructure address = function.getExportParameterList().getStructure("ADDRESS");
             String firstname = address.getString("FIRSTNAME");
             result.firstname = firstname;
-            String lastname = address.getString("LASTNAEM");
+            String lastname = address.getString("LASTNAME");
             result.lastname = lastname;
             String funcStr = address.getString("FUNCTION");
             result.function = funcStr;
