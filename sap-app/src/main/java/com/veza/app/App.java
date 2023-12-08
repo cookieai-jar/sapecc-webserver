@@ -800,6 +800,7 @@ public class App
                 String activityGroupName = existingGroups.getString("AGR_NAME");
                 Date fromDate = existingGroups.getDate("FROM_DAT");
                 Date toDate = existingGroups.getDate("TO_DAT");
+                userGroups[i] = new UserGroup();
                 userGroups[i].group = activityGroupName;
                 userGroups[i].fromDate = fromDate;
                 userGroups[i].toDate = toDate;
