@@ -208,7 +208,8 @@ public class App
                     if (userExisted) {
                         LOGGER.info("User "+ sapUser.username +" is existed, modify user");
                         message = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
-                            sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.parameters, sapUser.deactivatePassword);
+                            sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
+                            sapUser.parameters, sapUser.deactivatePassword);
                     } else {
                         LOGGER.info("User "+ sapUser.username +" does not existed, create user");
                         // TODO: verify we have the enough parameters like firstname/lastname, password
@@ -573,7 +574,7 @@ public class App
     }
 
     private static String modifyUser(String destName, String username, String password, String firstname, String lastname, String department, String functionStr, String email,
-        String licenseType, Map<String, String> parametersMap, Boolean deactivatePassword) {
+        String licenseType, String validFrom, String validTo, Map<String, String> parametersMap, Boolean deactivatePassword) {
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CHANGE");
@@ -601,28 +602,46 @@ public class App
                 parameterX.setValue("PARID", 'X');
                 parameterX.setValue("PARVA", 'X');
             }
-            if (deactivatePassword != null && deactivatePassword) {
+            if (deactivatePassword != null || notEmptyString(validFrom) || notEmptyString(validTo)) {
                 JCoStructure logonData = function.getImportParameterList().getStructure("LOGONDATA");
-                logonData.setValue("CODVC", 'X');
-                logonData.setValue("CODVN", 'X');
-                // Add the change indicator for LOGONDATA
                 JCoStructure logonDataX = function.getImportParameterList().getStructure("LOGONDATAX");
-                logonDataX.setValue("CODVC", 'X');
-                logonDataX.setValue("CODVN", 'X');
-            } else if (deactivatePassword != null && !deactivatePassword && notEmptyString(password)) {
-                LOGGER.info("Not to deactivate Password");
-                JCoStructure logonData = function.getImportParameterList().getStructure("LOGONDATA");
-                logonData.setValue("CODVC", 'F');
-                logonData.setValue("CODVN", 'B');
-                // Add the change indicator for LOGONDATA
-                JCoStructure logonDataX = function.getImportParameterList().getStructure("LOGONDATAX");
-                logonDataX.setValue("CODVC", 'X');
-                logonDataX.setValue("CODVN", 'X');
-                // Also set the new password
-                JCoStructure passwordData = function.getImportParameterList().getStructure("PASSWORD");
-                passwordData.setValue("BAPIPWD", password);
-                JCoStructure passwordDataX = function.getImportParameterList().getStructure("PASSWORDX");
-                passwordDataX.setValue("BAPIPWD", 'X');
+                if (deactivatePassword != null && deactivatePassword) {
+                    logonData.setValue("CODVC", 'X');
+                    logonData.setValue("CODVN", 'X');
+                    // Add the change indicator for LOGONDATA
+                    logonDataX.setValue("CODVC", 'X');
+                    logonDataX.setValue("CODVN", 'X');
+                } else if (deactivatePassword != null && !deactivatePassword && notEmptyString(password)) {
+                    logonData.setValue("CODVC", 'F');
+                    logonData.setValue("CODVN", 'B');
+                
+                    logonDataX.setValue("CODVC", 'X');
+                    logonDataX.setValue("CODVN", 'X');
+                    // Also set the new password
+                    JCoStructure passwordData = function.getImportParameterList().getStructure("PASSWORD");
+                    passwordData.setValue("BAPIPWD", password);
+                    JCoStructure passwordDataX = function.getImportParameterList().getStructure("PASSWORDX");
+                    passwordDataX.setValue("BAPIPWD", 'X');
+                }
+                SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
+                if (notEmptyString(validFrom)) {
+                    try {
+                        Date validFromDate = df.parse(validFrom);
+                        logonData.setValue("GLTGV", validFromDate);
+                        logonDataX.setValue("GLTGV", 'X');
+                    } catch (ParseException ex) {
+                        LOGGER.warn("Invalid format of valid from string: " + validFrom);
+                    }
+                }
+                if (notEmptyString(validTo)) {
+                    try {
+                        Date validToDate = df.parse(validTo);
+                        logonData.setValue("GLTGB", validToDate);
+                        logonDataX.setValue("GLTGB", 'X');
+                    } catch (ParseException ex) {
+                        LOGGER.warn("Invalid format of valid to string: " + validTo);
+                    }
+                }
             }
 
             if (notEmptyString(firstname) || notEmptyString(lastname) || notEmptyString(functionStr) || notEmptyString(department) || notEmptyString(email)) {
