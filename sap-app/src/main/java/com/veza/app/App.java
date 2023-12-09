@@ -75,6 +75,7 @@ public class App
             .post("/lock", lockHandler)
 	        .post("/create_user", createUserHandler)
             .post("/sync_user", syncUserHandler)
+            .post("/modify_user", syncUserHandler)
 	        .post("/assign_groups", assignGroupHandler)
             .post("/user_detail", getUserDetailHandler)
 	        .start();
@@ -956,7 +957,7 @@ public class App
         public String email;
         public String licenseType;
         public Map<String, String> parameters;
-        public Boolean deactivatePassword;
+        public boolean deactivatePassword;
         public String validFrom;
         public String validTo;
 
