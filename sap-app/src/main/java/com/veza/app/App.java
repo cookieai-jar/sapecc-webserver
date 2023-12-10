@@ -1,6 +1,8 @@
 package com.veza.app;
 
 import java.util.*;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.text.*;
 import io.javalin.http.Context;
 import io.javalin.http.Handler;
@@ -34,6 +36,7 @@ public class App
 {
     public static final String version = "Dec 2023 Build v1.2";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
+    static List<String> logBuffer = Collections.synchronizedList(new ArrayList<String>());
 
     SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
     static ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -41,7 +44,7 @@ public class App
 
     public static void main( String[] args )
     {
-        LOGGER.info("Starting....");
+        LoggingInfo("Starting....");
 
         SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
         mapper.setDateFormat(df);
@@ -52,11 +55,13 @@ public class App
             conf.http2=false;
             conf.pemFromPath("certjavalin.pem", "keyjavalin.pem", "1234");
           });
-        LOGGER.info("Create InMemory DestinationProvider...");
+        LoggingInfo("Create InMemory DestinationProvider...");
         memoryProvider=new App.InMemoryDestinationDataProvider();
         Environment.registerDestinationDataProvider(memoryProvider);
 
         AboutHandler aboutHandler = new AboutHandler();
+        RetrieveLogHandler logHandler = new RetrieveLogHandler();
+
         PingHandler pingHandler = new PingHandler();
         LockHandler lockHandler = new LockHandler();
         CreateUserHandler createUserHandler = new CreateUserHandler();
@@ -65,11 +70,12 @@ public class App
         GetUserDetailHandler getUserDetailHandler = new GetUserDetailHandler();
         ModifyUserHandler modifyUserHandler = new ModifyUserHandler();
 
-        LOGGER.info("Start Javalin webserver ...");
+        LoggingInfo("Start Javalin webserver ...");
         Javalin app = Javalin.create(config -> {
             config.plugins.register(plugin);
         })
             .get("/about", aboutHandler)
+            .get("/retrieve_log", logHandler)
             // .get("/echo/{text}", ctx -> ctx.result("Echo " + ctx.pathParam("text") +" at " + getCurrentTimeString()))
             .post("/ping", pingHandler)
             .post("/lock", lockHandler)
@@ -87,11 +93,54 @@ public class App
         return dateFormat.format(date);
     }
 
+    public static void LoggingInfo(final String s) {
+        LOGGER.info(s);
+        logBuffer.add("SAP INFO :"+s);
+        if (logBuffer.size() > 8192) {
+            logBuffer.remove(0);
+        }
+    }
+
+    public static void LoggingError(final String s) {
+        LOGGER.error(s);
+        logBuffer.add("SAP ERROR :"+s);
+        if (logBuffer.size() > 8192) {
+            logBuffer.remove(0);
+        }
+    }
+
+    public static void printStackTrace(Exception ex) {
+        StringWriter errors = new StringWriter();
+        ex.printStackTrace(new PrintWriter(errors));
+        LoggingError(errors.toString());
+    }
+
+    public static String[] flushLogBuffer() {
+        String[] result = new String[logBuffer.size()];
+        for (int i=0;i<logBuffer.size(); i++) {
+            result[i] = logBuffer.get(i);
+        }
+        logBuffer.clear();
+        return result;
+    }
+
     private static class AboutHandler implements Handler {
         @Override 
         public void handle(Context ctx) {
-            LOGGER.info(getCurrentTimeString() + ": About");
+            LoggingInfo(getCurrentTimeString() + ": About");
             ctx.result(version);
+        }
+    }
+
+    private static class RetrieveLogHandler implements Handler {
+        @Override
+        public void handle(Context ctx) {
+            StringBuffer sb = new StringBuffer();
+            String[] logs = flushLogBuffer();
+            for (int i=0;i<logs.length;i++) {
+                sb.append(logs[i] + "\n");
+            }
+            ctx.result(sb.toString());
         }
     }
 
@@ -108,7 +157,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info(getCurrentTimeString() + ": Ping " + sapServer);
+                LoggingInfo(getCurrentTimeString() + ": Ping " + sapServer);
                 if (sapServer.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -117,19 +166,19 @@ public class App
                     memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
                     String message = pingDestination(sapServer.host);
                     if ("".equals(message)) {
-                        LOGGER.info("Ping OK");
+                        LoggingInfo("Ping OK");
                         ctx.result("OK");
                         ctx.status(200);
                         return;
                     } else {
-                        LOGGER.error("Ping Failed");
+                        LoggingError("Ping Failed: " + message);
                         ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
                 }
             } catch (Exception exception) {
-                LOGGER.error("Failed to ping destination:" + exception.toString());
+                LoggingError("Failed to ping destination:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
@@ -150,7 +199,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info(getCurrentTimeString() +": Create User " + sapUser);
+                LoggingInfo(getCurrentTimeString() +": Create User " + sapUser);
                 if (sapUser.server.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -161,19 +210,19 @@ public class App
                         sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                         sapUser.parameters, sapUser.deactivatePassword);
                     if ("".equals(message)) {
-                        LOGGER.info("Create User OK");
+                        LoggingInfo("Create User OK");
                         ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
-                        LOGGER.error("Create User Failed");
+                        LoggingError("Create User Failed: " + message);
                         ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
                 }
             } catch (Exception exception) {
-                LOGGER.error("Failed to create user:" + exception.toString());
+                LoggingError("Failed to create user:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
@@ -194,7 +243,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info(getCurrentTimeString() +": Create User " + sapUser);
+                LoggingInfo(getCurrentTimeString() +": Create User " + sapUser);
                 if (sapUser.server.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -205,19 +254,19 @@ public class App
                         sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                         sapUser.parameters, sapUser.deactivatePassword);
                     if ("".equals(message)) {
-                        LOGGER.info("Modify User OK");
+                        LoggingInfo("Modify User OK");
                         ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
-                        LOGGER.error("modify User Failed");
+                        LoggingError("Modify User Failed: " + message);
                         ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
                 }
             } catch (Exception exception) {
-                LOGGER.error("Failed to modify user:" + exception.toString());
+                LoggingError("Failed to modify user:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
@@ -238,7 +287,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info(getCurrentTimeString() +": Sync User " + sapUser);
+                LoggingInfo(getCurrentTimeString() +": Sync User " + sapUser);
                 if (sapUser.server.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -247,37 +296,37 @@ public class App
                     Boolean userExisted = confirmUserExist(sapUser.server.host, sapUser.username);
                     if (userExisted == null) {
                         String errMsg = "Unable to determine if user " + sapUser.username +" existsed or not";
-                        LOGGER.error(errMsg);
+                        LoggingError(errMsg);
                         ctx.status(500);
                         ctx.result(errMsg);
                         return;
                     }
                     String message = "";
                     if (userExisted) {
-                        LOGGER.info("User "+ sapUser.username +" is existed, modify user");
+                        LoggingInfo("User "+ sapUser.username +" is existed, modify user");
                         message = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                             sapUser.parameters, sapUser.deactivatePassword);
                     } else {
-                        LOGGER.info("User "+ sapUser.username +" does not existed, create user");
+                        LoggingInfo("User "+ sapUser.username +" does not existed, create user");
                         // TODO: verify we have the enough parameters like firstname/lastname, password
                         message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                             sapUser.parameters, sapUser.deactivatePassword);
                     }
                     if ("".equals(message)) {
-                        LOGGER.info("Sync User OK");
+                        LoggingInfo("Sync User OK");
                         ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
-                        LOGGER.error("Sync User Failed");
+                        LoggingError("Sync User Failed: " + message);
                         ctx.result("Failed with message :" + message);
                         ctx.status(500);
                     }
                 }
             } catch (Exception exception) {
-                LOGGER.error("Failed to sync user:" + exception.toString());
+                LoggingError("Failed to sync user:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
@@ -298,7 +347,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info(getCurrentTimeString() +": Assign group to User " + request);
+                LoggingInfo(getCurrentTimeString() +": Assign group to User " + request);
                 if (request.server.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -307,19 +356,19 @@ public class App
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
                     String message = addUserGroupToUser(request.server.host, request.username, request.userGroups);
                     if ("".equals(message)) {
-                        LOGGER.info("Assign group to user OK!");
+                        LoggingInfo("Assign group to user OK!");
 		                ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
-                        LOGGER.error("Assign group Failed");
+                        LoggingError("Assign group Failed:"  + message);
                         ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
                 }
             } catch (Exception exception) {
-                LOGGER.error("Failed to assign group:" + exception.toString());
+                LoggingError("Failed to assign group:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
@@ -340,7 +389,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info(getCurrentTimeString() +": Lock User " + request);
+                LoggingInfo(getCurrentTimeString() +": Lock User " + request);
                 if (request.server.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -350,26 +399,26 @@ public class App
                     // First remove all activity groups from current user
                     String message = removeParameterAndLicenseTypeAndGroups(request.server.host, request.username);
                     if (!"".equals(message)) {
-                        LOGGER.error("Lock Failed, Unable to remove all roles from a user");
+                        LoggingError("Lock Failed, Unable to remove all roles from a user");
                         ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
                     message = lockUser(request.server.host, request.username);
                     if ("".equals(message)) {
-                        LOGGER.info("Lock user OK");
+                        LoggingInfo("Lock user OK");
 		                ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
-                        LOGGER.error("Lock Failed");
+                        LoggingError("Lock Failed: " + message);
                         ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
                     }
                 }
             } catch (Exception exception) {
-                LOGGER.error("Failed to lock:" + exception.toString());
+                LoggingError("Failed to lock:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
@@ -390,7 +439,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LOGGER.info(getCurrentTimeString() +": Get User Detail " + request);
+                LoggingInfo(getCurrentTimeString() +": Get User Detail " + request);
                 if (request.server.isTestingServer) {
                     ctx.status(200);
                     return;
@@ -399,25 +448,28 @@ public class App
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
                     Boolean exists = confirmUserExist(request.server.host, request.username);
                     if (exists == null || !exists) {
-                        LOGGER.error("Get User Detail Failed because user " + request.username + " doesn't exists.");
+                        LoggingError("Get User Detail Failed because user " + request.username + " doesn't exists.");
                         ctx.result("Failed: user doesn't exists");
                         ctx.status(500);
                         return;
                     }
                     SapUserDetail userDetail = getUserDetail(request.server.host, request.username);
                     if (userDetail != null) {
-                        LOGGER.info("Get user detail OK");
+                        LoggingInfo("Get user detail OK");
 		                ctx.result(userDetail.toString());
                         ctx.status(200);
                         return;
                     } else {
-                        LOGGER.error("Get User Detail Failed");
+                        LoggingError("Get User Detail Failed");
                         ctx.result("Failed");
                         ctx.status(500);
                         return;
                     }
                 }
             } catch (Exception exception) {
+                LoggingError("Failed to get user detail:" + exception.toString());
+                ctx.status(500);
+                ctx.result(exception.getMessage());
                 throw new Error(exception);
             }
         }
@@ -428,11 +480,11 @@ public class App
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             destination.ping();
-            LOGGER.info("Destination "+destName+" works");
+            LoggingInfo("Destination "+destName+" works");
             return "";
-        } catch (JCoException e) {
-            LOGGER.error("Ping destination " + destName + " failed.");
-            e.printStackTrace();
+        } catch (Exception e) {
+            LoggingError("Ping destination " + destName + " failed.");
+            printStackTrace(e);
             return e.toString();
         }
     }
@@ -501,9 +553,9 @@ public class App
 
             function.execute(destination);
             return processFunctionReturn(function);
-        } catch (JCoException e) {
-            LOGGER.error("create user " + username + " to " + destName + " failed.");
-            e.printStackTrace();
+        } catch (Exception e) {
+            LoggingError("create user " + username + " to " + destName + " failed.");
+            printStackTrace(e);
             return e.toString();
         }
     }
@@ -532,9 +584,9 @@ public class App
             function.execute(destination);
 
             return processFunctionReturn(function);
-        } catch (JCoException e) {
-            LOGGER.error("add user to gropus for user" + username + " on " + destName + "failed");
-            e.printStackTrace();
+        } catch (Exception e) {
+            LoggingError("add user to gropus for user" + username + " on " + destName + "failed");
+            printStackTrace(e);
             return e.toString();
         }
     }
@@ -549,9 +601,9 @@ public class App
 
             function.execute(destination);
             return processFunctionReturn(function);
-        } catch (JCoException e) {
-            LOGGER.error("lock user " + username + " to " + destName + " failed.");
-            e.printStackTrace();
+        } catch (Exception e) {
+            LoggingError("lock user " + username + " to " + destName + " failed.");
+            printStackTrace(e);
             return e.toString();
         }
     }
@@ -559,7 +611,7 @@ public class App
     private static String removeParameterAndLicenseTypeAndGroups(String destName, String username) {
         try {
             // Remove all groups from user
-            LOGGER.info("Remove all roles from user " + username);
+            LoggingInfo("Remove all roles from user " + username);
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function1 = destination.getRepository().getFunction("BAPI_USER_ACTGROUPS_ASSIGN");
             if (function1==null)
@@ -569,11 +621,11 @@ public class App
             function1.execute(destination);
             String message1 = processFunctionReturn(function1);
             if (!"".equals(message1)) {
-                LOGGER.info("Unable to remove the roles from user " + username + " error: " + message1);
+                LoggingInfo("Unable to remove the roles from user " + username + " error: " + message1);
                 return message1;
             }
 
-            LOGGER.info("Remove liense type and parameters from user " + username);
+            LoggingInfo("Remove liense type and parameters from user " + username);
             JCoFunction function2 = destination.getRepository().getFunction("BAPI_USER_CHANGE");
             if (function2==null)
                 throw new RuntimeException("BAPI_USER_CHANGE not found in SAP.");
@@ -590,9 +642,9 @@ public class App
             parameterX.setValue("PARVA", 'X');
             function2.execute(destination);
             return processFunctionReturn(function2);
-        } catch (JCoException e) {
-            LOGGER.error("remove user role/license_type and parameters for " + username + " at " + destName + " failed.");
-            e.printStackTrace();
+        } catch (Exception e) {
+            LoggingError("remove user role/license_type and parameters for " + username + " at " + destName + " failed.");
+            printStackTrace(e);
             return e.toString();
         }
     }
@@ -619,7 +671,7 @@ public class App
                     parameters.appendRow();
                     parameters.setValue("PARID", key);
                     parameters.setValue("PARVA", parametersMap.get(key));
-                    LOGGER.info("Set the parameters type key:" + key + " value: " + parametersMap.get(key));
+                    LoggingInfo("Set the parameters type key:" + key + " value: " + parametersMap.get(key));
                 }
                 // Add change indicator for parameters
                 JCoStructure parameterX = function.getImportParameterList().getStructure("PARAMETERX");
@@ -695,9 +747,9 @@ public class App
 
             function.execute(destination);
             return processFunctionReturn(function);
-        } catch (JCoException e) {
-            LOGGER.error("lock user " + username + " to " + destName + " failed.");
-            e.printStackTrace();
+        } catch (Exception e) {
+            LoggingError("lock user " + username + " to " + destName + " failed.");
+            printStackTrace(e);
             return e.toString();
         }
     }
@@ -716,18 +768,18 @@ public class App
             char c = returnStruct.getChar("TYPE");
             String infoMessage =  returnStruct.getString("MESSAGE");
             if (c != 'I') {
-                LOGGER.info("Unable to understand the return type: " + c);
+                LoggingInfo("Unable to understand the return type: " + c);
                 return null;
             }
             String expectedMsg = "User " + username + " exists";
             if (infoMessage.toLowerCase().contains(expectedMsg.toLowerCase())) {
                 return true;
             }
-            LOGGER.info("The info message for checking user " + username + " is: " + infoMessage);
+            LoggingInfo("The info message for checking user " + username + " is: " + infoMessage);
             return false;
-        } catch (JCoException e) {
-            LOGGER.error("confirm user " + username + " at " + destName + " failed.");
-            e.printStackTrace();
+        } catch (Exception e) {
+            LoggingError("confirm user " + username + " at " + destName + " failed.");
+            printStackTrace(e);
             return null;
         }
     }
@@ -773,9 +825,7 @@ public class App
                 result.validTo = dateFormat.format(userValidToDate);
             }
             char codvc = logonData.getChar("CODVC");
-            LOGGER.info("CODVC:" + codvc);
             char codvn = logonData.getChar("CODVN");
-            LOGGER.info("CODVN:" + codvn);
             if (codvc == 'X' && codvn == 'X') {
                 result.deactivatePassword = true;
             }
@@ -813,9 +863,9 @@ public class App
                 result.userGroups = userGroups;
             }
             return result;
-        } catch (JCoException e) {
-            LOGGER.error("get user detail of " + username + " to " + destName + " failed.");
-            e.printStackTrace();
+        } catch (Exception e) {
+            LoggingError("get user detail of " + username + " to " + destName + " failed.");
+            printStackTrace(e);
         }
         return null;
     }
@@ -831,7 +881,7 @@ public class App
                 return "";
             } else {
                 String errMessage = "Return type: " + c + " Message: " + returns.getString("MESSAGE") + ". ";
-                LOGGER.error(errMessage);
+                LoggingError(errMessage);
                 returnErrorMessage += errMessage;
             }
         }
@@ -967,7 +1017,7 @@ public class App
                 mapper.setSerializationInclusion(Include.NON_NULL);
                 return mapper.writeValueAsString(this);
             } catch (JsonProcessingException ex) {
-                LOGGER.error("Unable to serialized");
+                LoggingError("Unable to serialized");
                 return "{}";
             }
         }
