@@ -297,24 +297,16 @@ public class App
                     return;
                 }
                 synchronized(memoryProvider) {
-                    Boolean userExisted = confirmUserExist(sapUser.server.host, sapUser.username);
-                    if (userExisted == null) {
-                        String errMsg = "Unable to determine if user " + sapUser.username +" existsed or not";
-                        LoggingError(errMsg);
-                        ctx.status(500);
-                        ctx.result(errMsg);
-                        return;
-                    }
+                    SapUserDetail userDetail = getUserDetail(sapUser.server.host, sapUser.username);
                     SapResult sapResult;
-                    if (userExisted) {
+                    if (userDetail != null) {
                         LoggingInfo("User "+ sapUser.username +" is existed, modify user");
                         sapResult = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                             sapUser.parameters, sapUser.deactivatePassword);
                     } else {
                         LoggingInfo("User "+ sapUser.username +" does not existed, create user");
-                        // TODO: verify we have the enough parameters like firstname/lastname, password
-                       sapResult = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
+                        sapResult = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                             sapUser.parameters, sapUser.deactivatePassword);
                     }
@@ -453,13 +445,6 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
-                    Boolean exists = confirmUserExist(request.server.host, request.username);
-                    if (exists == null || !exists) {
-                        LoggingError("Get User Detail Failed because user " + request.username + " doesn't exists.");
-                        ctx.result("Failed: user doesn't exists");
-                        ctx.status(500);
-                        return;
-                    }
                     SapUserDetail userDetail = getUserDetail(request.server.host, request.username);
                     if (userDetail != null) {
                         LoggingInfo("Get user detail OK");
