@@ -297,6 +297,7 @@ public class App
                     return;
                 }
                 synchronized(memoryProvider) {
+                    memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromStruct(sapUser.server));
                     SapUserDetail userDetail = getUserDetail(sapUser.server.host, sapUser.username);
                     SapResult sapResult;
                     if (userDetail != null) {
