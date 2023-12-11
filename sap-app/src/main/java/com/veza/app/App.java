@@ -159,6 +159,7 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() + ": Ping " + sapServer);
                 if (sapServer.isTestingServer) {
+                    ctx.result("{}");
                     ctx.status(200);
                     return;
                 }
@@ -201,6 +202,7 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Create User " + sapUser);
                 if (sapUser.server.isTestingServer) {
+                    ctx.result("{}");
                     ctx.status(200);
                     return;
                 }
@@ -245,6 +247,7 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Create User " + sapUser);
                 if (sapUser.server.isTestingServer) {
+                    ctx.result("{}");
                     ctx.status(200);
                     return;
                 }
@@ -289,6 +292,7 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Sync User " + sapUser);
                 if (sapUser.server.isTestingServer) {
+                    ctx.result("{}");
                     ctx.status(200);
                     return;
                 }
@@ -349,6 +353,7 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Assign group to User " + request);
                 if (request.server.isTestingServer) {
+                    ctx.result("{}");
                     ctx.status(200);
                     return;
                 }
@@ -391,6 +396,7 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Lock User " + request);
                 if (request.server.isTestingServer) {
+                    ctx.result("{}");
                     ctx.status(200);
                     return;
                 }
@@ -441,6 +447,7 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Get User Detail " + request);
                 if (request.server.isTestingServer) {
+                    ctx.result("{}");
                     ctx.status(200);
                     return;
                 }
