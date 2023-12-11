@@ -81,7 +81,7 @@ public class App
             .post("/lock", lockHandler)
 	        .post("/create_user", createUserHandler)
             .post("/sync_user", syncUserHandler)
-            .post("/modify_user", syncUserHandler)
+            .post("/modify_user", modifyUserHandler)
 	        .post("/assign_groups", assignGroupHandler)
             .post("/user_detail", getUserDetailHandler)
 	        .start();
@@ -167,7 +167,7 @@ public class App
                     String message = pingDestination(sapServer.host);
                     if ("".equals(message)) {
                         LoggingInfo("Ping OK");
-                        ctx.result("OK");
+                        ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
@@ -206,17 +206,17 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromStruct(sapUser.server));
-                    String message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
+                    SapResult sapResult = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                         sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                         sapUser.parameters, sapUser.deactivatePassword);
-                    if ("".equals(message)) {
+                    if ("".equals(sapResult.errorMessage)) {
                         LoggingInfo("Create User OK");
-                        ctx.result("{}");
+                        ctx.result(sapResult.toString());
                         ctx.status(200);
                         return;
                     } else {
-                        LoggingError("Create User Failed: " + message);
-                        ctx.result("Failed with message :" + message);
+                        LoggingError("Create User Failed: " + sapResult.errorMessage);
+                        ctx.result("Failed with message :" + sapResult.errorMessage);
                         ctx.status(500);
                         return;
                     }
@@ -250,17 +250,17 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromStruct(sapUser.server));
-                    String message = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
+                    SapResult sapResult = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                         sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                         sapUser.parameters, sapUser.deactivatePassword);
-                    if ("".equals(message)) {
+                    if ("".equals(sapResult.errorMessage)) {
                         LoggingInfo("Modify User OK");
-                        ctx.result("{}");
+                        ctx.result(sapResult.toString());
                         ctx.status(200);
                         return;
                     } else {
-                        LoggingError("Modify User Failed: " + message);
-                        ctx.result("Failed with message :" + message);
+                        LoggingError("Modify User Failed: " + sapResult.errorMessage);
+                        ctx.result("Failed with message :" + sapResult.errorMessage);
                         ctx.status(500);
                         return;
                     }
@@ -301,27 +301,27 @@ public class App
                         ctx.result(errMsg);
                         return;
                     }
-                    String message = "";
+                    SapResult sapResult;
                     if (userExisted) {
                         LoggingInfo("User "+ sapUser.username +" is existed, modify user");
-                        message = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
+                        sapResult = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                             sapUser.parameters, sapUser.deactivatePassword);
                     } else {
                         LoggingInfo("User "+ sapUser.username +" does not existed, create user");
                         // TODO: verify we have the enough parameters like firstname/lastname, password
-                        message = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
+                       sapResult = createUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
                             sapUser.parameters, sapUser.deactivatePassword);
                     }
-                    if ("".equals(message)) {
+                    if ("".equals(sapResult.errorMessage)) {
                         LoggingInfo("Sync User OK");
-                        ctx.result("{}");
+                        ctx.result(sapResult.toString());
                         ctx.status(200);
                         return;
                     } else {
-                        LoggingError("Sync User Failed: " + message);
-                        ctx.result("Failed with message :" + message);
+                        LoggingError("Sync User Failed: " + sapResult.errorMessage);
+                        ctx.result("Failed with message :" + sapResult.errorMessage);
                         ctx.status(500);
                     }
                 }
@@ -489,8 +489,14 @@ public class App
         }
     }
 
-    private static String createUser(String destName, String username, String password, String firstName, String lastName,
+    private static SapResult createUser(String destName, String username, String password, String firstName, String lastName,
         String department, String functionStr, String email, String licenseType, String validFrom, String validTo, Map<String, String> parametersMap, Boolean deactivatePassword) {
+        SapResult result = new SapResult();
+        if (deactivatePassword != null && deactivatePassword == true) {
+            result.newPasswordChanged = false;
+        } else {
+            result.newPasswordChanged = true;
+        }
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CREATE1");
@@ -552,11 +558,14 @@ public class App
             }
 
             function.execute(destination);
-            return processFunctionReturn(function);
+            result.errorMessage = processFunctionReturn(function);
+            return result;
         } catch (Exception e) {
             LoggingError("create user " + username + " to " + destName + " failed.");
             printStackTrace(e);
-            return e.toString();
+            result.errorMessage= e.toString();
+            result.newPasswordChanged = false;
+            return result;
         }
     }
 
@@ -649,8 +658,17 @@ public class App
         }
     }
 
-    private static String modifyUser(String destName, String username, String password, String firstname, String lastname, String department, String functionStr, String email,
+    private static SapResult modifyUser(String destName, String username, String password, String firstname, String lastname, String department, String functionStr, String email,
         String licenseType, String validFrom, String validTo, Map<String, String> parametersMap, Boolean deactivatePassword) {
+    
+        SapResult result = new SapResult();    
+        // Need special handling if deactivePassword = false and existing user's password is deactivated. we need to notify
+        // that a new password is setup
+        SapUserDetail userDetail = getUserDetail(destName, username);
+        if (deactivatePassword != null && !deactivatePassword && userDetail.deactivatePassword && notEmptyString(password)) {
+           LoggingInfo("Currently the user " + username +" is deactivated password, now re generate the password");
+           result.newPasswordChanged = true;
+        }
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_CHANGE");
@@ -687,7 +705,7 @@ public class App
                     // Add the change indicator for LOGONDATA
                     logonDataX.setValue("CODVC", 'X');
                     logonDataX.setValue("CODVN", 'X');
-                } else if (deactivatePassword != null && !deactivatePassword && notEmptyString(password)) {
+                } else if (deactivatePassword != null && !deactivatePassword && userDetail.deactivatePassword && notEmptyString(password)) {
                     logonData.setValue("CODVC", 'F');
                     logonData.setValue("CODVN", 'B');
                 
@@ -744,13 +762,15 @@ public class App
                     addressX.setValue("E_MAIL", 'X');
                 }
             }
-
             function.execute(destination);
-            return processFunctionReturn(function);
+            result.errorMessage = processFunctionReturn(function);
+            return result;
         } catch (Exception e) {
-            LoggingError("lock user " + username + " to " + destName + " failed.");
+            LoggingError("modify user " + username + " to " + destName + " failed.");
             printStackTrace(e);
-            return e.toString();
+            result.errorMessage =  e.toString();
+            result.newPasswordChanged = false;
+            return result;
         }
     }
 
@@ -1000,6 +1020,7 @@ public class App
 
     private static class SapUserDetail {
         public String username;
+        public String password;
         public String firstname;
         public String lastname;
         public String department;
@@ -1017,7 +1038,21 @@ public class App
                 mapper.setSerializationInclusion(Include.NON_NULL);
                 return mapper.writeValueAsString(this);
             } catch (JsonProcessingException ex) {
-                LoggingError("Unable to serialized");
+                LoggingError("Unable to serialized SapUserDetail");
+                return "{}";
+            }
+        }
+    }
+
+    private static class SapResult {
+        public Boolean newPasswordChanged;
+        public String errorMessage;
+        public String toString() {
+            try {
+                mapper.setSerializationInclusion(Include.NON_NULL);
+                return mapper.writeValueAsString(this);
+            } catch (JsonProcessingException ex) {
+                LoggingError("Unable to serialized SapUserDetail");
                 return "{}";
             }
         }
