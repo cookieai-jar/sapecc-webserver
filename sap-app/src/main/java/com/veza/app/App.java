@@ -202,7 +202,13 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Create User " + sapUser);
                 if (sapUser.server.isTestingServer) {
-                    ctx.result("{}");
+                    SapResult result = new SapResult();
+                    if (sapUser.deactivatePassword != null && sapUser.deactivatePassword) {
+                        result.newPasswordChanged = false;
+                    } else {
+                        result.newPasswordChanged = true;
+                    }
+                    ctx.result(result.toString());
                     ctx.status(200);
                     return;
                 }
