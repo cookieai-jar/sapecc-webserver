@@ -34,7 +34,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Dec 2023 Build v1.2";
+    public static final String version = "Dec 2023 Build v1.3";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
     static List<String> logBuffer = Collections.synchronizedList(new ArrayList<String>());
 
@@ -253,7 +253,13 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Create User " + sapUser);
                 if (sapUser.server.isTestingServer) {
-                    ctx.result("{}");
+                    SapResult result = new SapResult();
+                    if (sapUser.deactivatePassword != null && !sapUser.deactivatePassword && notEmptyString(sapUser.password)) {
+                        result.newPasswordChanged = true;
+                    } else {
+                        result.newPasswordChanged = false;
+                    }
+                    ctx.result(result.toString());
                     ctx.status(200);
                     return;
                 }
@@ -298,7 +304,13 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Sync User " + sapUser);
                 if (sapUser.server.isTestingServer) {
-                    ctx.result("{}");
+                    SapResult result = new SapResult();
+                    if (sapUser.deactivatePassword != null && !sapUser.deactivatePassword && notEmptyString(sapUser.password)) {
+                        result.newPasswordChanged = true;
+                    } else {
+                        result.newPasswordChanged = false;
+                    }
+                    ctx.result(result.toString());
                     ctx.status(200);
                     return;
                 }
