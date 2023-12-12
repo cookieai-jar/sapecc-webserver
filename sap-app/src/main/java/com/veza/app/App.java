@@ -537,21 +537,20 @@ public class App
                     logonData.setValue("CODVC", 'X');
                     logonData.setValue("CODVN", 'X');
                 }
-                SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
                 if (notEmptyString(validFrom)) {
-                    try {
-                        Date validFromDate = df.parse(validFrom);
+                    Date validFromDate = getDateFromString(validFrom);
+                    if (validFromDate == null) {
+                        LoggingError("Invalid format of valid from string: " + validFrom);
+                    } else {
                         logonData.setValue("GLTGV", validFromDate);
-                    } catch (ParseException ex) {
-                        LOGGER.warn("Invalid format of valid from string: " + validFrom);
                     }
                 }
                 if (notEmptyString(validTo)) {
-                    try {
-                        Date validToDate = df.parse(validTo);
+                    Date validToDate = getDateFromString(validTo);
+                    if (validToDate == null) {
+                        LoggingError("Invalid format of valid from string: " + validToDate);
+                    } else {
                         logonData.setValue("GLTGB", validToDate);
-                    } catch (ParseException ex) {
-                        LOGGER.warn("Invalid format of valid to string: " + validTo);
                     }
                 }
             }
@@ -716,23 +715,22 @@ public class App
                     JCoStructure passwordDataX = function.getImportParameterList().getStructure("PASSWORDX");
                     passwordDataX.setValue("BAPIPWD", 'X');
                 }
-                SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
                 if (notEmptyString(validFrom)) {
-                    try {
-                        Date validFromDate = df.parse(validFrom);
+                    Date validFromDate = getDateFromString(validFrom);
+                    if (validFromDate != null) {
                         logonData.setValue("GLTGV", validFromDate);
                         logonDataX.setValue("GLTGV", 'X');
-                    } catch (ParseException ex) {
-                        LOGGER.warn("Invalid format of valid from string: " + validFrom);
+                    } else {
+                        LoggingError("Invalid format of valid from string: " + validFrom);
                     }
                 }
                 if (notEmptyString(validTo)) {
-                    try {
-                        Date validToDate = df.parse(validTo);
+                    Date validToDate = getDateFromString(validTo);
+                    if (validToDate != null) {
                         logonData.setValue("GLTGB", validToDate);
                         logonDataX.setValue("GLTGB", 'X');
-                    } catch (ParseException ex) {
-                        LOGGER.warn("Invalid format of valid to string: " + validTo);
+                    } else {
+                        LoggingError("Invalid format of valid to string: " + validTo);
                     }
                 }
             }
@@ -1054,6 +1052,26 @@ public class App
                 LoggingError("Unable to serialized SapUserDetail");
                 return "{}";
             }
+        }
+    }
+
+    public static Date getDateFromString(final String dateString) {
+        String[] formatList = new String[]{"MM/dd/yyyy", "MM-dd-yyyy", "yyyy/MM/dd", "yyyy-MM-dd"};
+        for (int i=0;i<formatList.length;i++) {
+            Date date = getDateFormStringAndFormat(dateString, formatList[i]);
+            if (date != null) {
+                return date;
+            }
+        }
+        return null;
+    }
+
+    public static Date getDateFormStringAndFormat(final String dateString, final String format) {
+        try {
+            SimpleDateFormat df = new SimpleDateFormat(format);
+            return df.parse(dateString);
+        } catch (Exception e) {
+            return null;
         }
     }
 
