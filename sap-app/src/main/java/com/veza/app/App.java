@@ -1076,7 +1076,8 @@ public class App
             "yyyy-MM-dd'T'HH:mm:ss'Z'",
             "yyyy-MM-dd'T'HH:mm:ssZ",
             "yyyy-MM-dd'T'HH:mm:ss",
-            "yyyy-MM-dd HH:mm:ss"
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ssZ"
         };
         for (int i=0;i<formatList.length;i++) {
             Date date = getDateFormStringAndFormat(dateString, formatList[i]);
