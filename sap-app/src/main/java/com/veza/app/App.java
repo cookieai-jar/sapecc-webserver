@@ -521,17 +521,17 @@ public class App
         ArrayList<String> result = new ArrayList<>();
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
-            JCoFunction function=destination.getRepository().getFunction("RFC_GET_TABLE_ENTRIES");
+            JCoFunction function=destination.getRepository().getFunction("PRGN_GET_ROLES");
             if (function==null)
-                throw new RuntimeException("RFC_GET_TABLE_ENTRIES not found in SAP.");
-            function.getImportParameterList().setValue("TABLE_NAME", "AGR_DEFINE");
+                throw new RuntimeException("PRGN_GET_ROLES  not found in SAP.");
+            function.getImportParameterList().setValue("ROLE_NAME_PATTERN", "*");
             function.execute(destination);
-            JCoTable groups =function.getTableParameterList().getTable("ENTRIES");
+            JCoTable groups =function.getTableParameterList().getTable("SINGLE_ROLES");
             for (int i=0;i<groups.getNumRows(); i++) {
                 groups.setRow(i);
-                String str = groups.getString("WA");
-                String[] splitStr = str.trim().split("\\s+");
-                result.add(splitStr[0]);
+                String str = groups.getString("AGR_NAME");
+                //String[] splitStr = str.trim().split("\\s+");
+                result.add(str);
             }
             return result;
         } catch (Exception e) {
