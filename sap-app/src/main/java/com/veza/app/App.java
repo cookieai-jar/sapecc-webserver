@@ -1183,9 +1183,17 @@ public class App
     }
 
     public static Date getDateFormStringAndFormat(final String dateString, final String format) {
+        Calendar c1 = Calendar.getInstance();
+        c1.set(1900, 0, 1, 0, 0);
+        Calendar c2 = Calendar.getInstance();
+        c2.set(2100, 0, 1, 0, 0);
         try {
             SimpleDateFormat df = new SimpleDateFormat(format);
-            return df.parse(dateString);
+            Date date = df.parse(dateString);
+            if (date.before(c1.getTime()) || date.after(c2.getTime())) {
+                return null;
+            }
+            return date;
         } catch (Exception e) {
             return null;
         }
