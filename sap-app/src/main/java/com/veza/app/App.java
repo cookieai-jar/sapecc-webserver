@@ -1189,6 +1189,7 @@ public class App
         c2.set(2100, 0, 1, 0, 0);
         try {
             SimpleDateFormat df = new SimpleDateFormat(format);
+            df.setLenient(false);
             Date date = df.parse(dateString);
             if (date.before(c1.getTime()) || date.after(c2.getTime())) {
                 return null;
