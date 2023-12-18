@@ -175,7 +175,7 @@ public class App
                     List<String> groupList = getGroupList(sapServer.host);
                     for (int i=0;i< groupList.size();i++) {
                         String groupName = groupList.get(i);
-                        if (groupName.contains("AUTHOR") || groupName.contains("SAP") || groupName.contains("USER")) {
+                        if (groupName.contains("AUTHOR") || groupName.contains("USER")) {
                             LOGGER.info("groupname: " + groupName);
                         }
                     }
@@ -527,6 +527,13 @@ public class App
             function.getImportParameterList().setValue("ROLE_NAME_PATTERN", "*");
             function.execute(destination);
             JCoTable groups =function.getTableParameterList().getTable("SINGLE_ROLES");
+            for (int i=0;i<groups.getNumRows(); i++) {
+                groups.setRow(i);
+                String str = groups.getString("AGR_NAME");
+                //String[] splitStr = str.trim().split("\\s+");
+                result.add(str);
+            }
+            groups =function.getTableParameterList().getTable("COLLCT_ROLES");
             for (int i=0;i<groups.getNumRows(); i++) {
                 groups.setRow(i);
                 String str = groups.getString("AGR_NAME");
