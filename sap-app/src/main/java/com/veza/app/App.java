@@ -165,10 +165,17 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
-                    /* List<String> userList = getUserList(sapServer.host);
+                    /*LOGGER.info("=================================");
+                    List<String> userList = getUserList(sapServer.host);
                     for (int i=0;i< userList.size();i++) {
                         LOGGER.info("username:" + userList.get(i));
-                    }*/
+                    }
+                    LOGGER.info("=================================");
+                    List<String> groupList = getGroupList(sapServer.host);
+                    for (int i=0;i< groupList.size();i++) {
+                        LOGGER.info("groupname:" + groupList.get(i));
+                    }
+                    LOGGER.info("=================================");*/
 
                     String message = pingDestination(sapServer.host);
                     if ("".equals(message)) {
@@ -505,6 +512,28 @@ public class App
         }
     }
 
+    private static List<String> getGroupList(String destName) {
+        ArrayList<String> result = new ArrayList<>();
+        try {
+            JCoDestination destination=JCoDestinationManager.getDestination(destName);
+            JCoFunction function=destination.getRepository().getFunction("BAPI_ACTIVITYTYPEGRP_GETLIST");
+            if (function==null)
+                throw new RuntimeException("BAPI_ACTIVITYTYPEGRP_GETLIST not found in SAP.");
+            function.execute(destination);
+            JCoTable groups =function.getTableParameterList().getTable("GROUPLIST");
+            for (int i=0;i<groups.getNumRows(); i++) {
+                groups.setRow(i);
+                String groupname = groups.getString("GROUPNAME");
+                result.add(groupname);
+            }
+            return result;
+        } catch (Exception e) {
+            LoggingError("BAPI_ACTIVITYTYPEGRP_GETLIST to destination " + destName + " failed.");
+            printStackTrace(e);
+            return result;
+        }
+
+    }
     private static List<String> getUserList(String destName) {
         ArrayList<String> result = new ArrayList<>();
         try {
