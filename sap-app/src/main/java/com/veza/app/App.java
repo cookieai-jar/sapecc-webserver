@@ -516,19 +516,19 @@ public class App
         ArrayList<String> result = new ArrayList<>();
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
-            JCoFunction function=destination.getRepository().getFunction("BAPI_ACTIVITYTYPEGRP_GETLIST");
+            JCoFunction function=destination.getRepository().getFunction("PRGN_GET_ROLES");
             if (function==null)
-                throw new RuntimeException("BAPI_ACTIVITYTYPEGRP_GETLIST not found in SAP.");
+                throw new RuntimeException("PRGN_GET_ROLES not found in SAP.");
             function.execute(destination);
-            JCoTable groups =function.getTableParameterList().getTable("GROUPLIST");
+            JCoTable groups =function.getTableParameterList().getTable("SINGLE_ROLES");
             for (int i=0;i<groups.getNumRows(); i++) {
                 groups.setRow(i);
-                String groupname = groups.getString("GROUPNAME");
+                String groupname = groups.getString("AGR_NAME");
                 result.add(groupname);
             }
             return result;
         } catch (Exception e) {
-            LoggingError("BAPI_ACTIVITYTYPEGRP_GETLIST to destination " + destName + " failed.");
+            LoggingError("PRGN_GET_ROLES to destination " + destName + " failed.");
             printStackTrace(e);
             return result;
         }
