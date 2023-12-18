@@ -165,6 +165,11 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
+                    /* List<String> userList = getUserList(sapServer.host);
+                    for (int i=0;i< userList.size();i++) {
+                        LOGGER.info("username:" + userList.get(i));
+                    }*/
+
                     String message = pingDestination(sapServer.host);
                     if ("".equals(message)) {
                         LoggingInfo("Ping OK");
@@ -497,6 +502,28 @@ public class App
             LoggingError("Ping destination " + destName + " failed.");
             printStackTrace(e);
             return e.toString();
+        }
+    }
+
+    private static List<String> getUserList(String destName) {
+        ArrayList<String> result = new ArrayList<>();
+        try {
+            JCoDestination destination=JCoDestinationManager.getDestination(destName);
+            JCoFunction function=destination.getRepository().getFunction("BAPI_USER_GETLIST");
+            if (function==null)
+                throw new RuntimeException("BAPI_USER_GETLIST not found in SAP.");
+            function.execute(destination);
+            JCoTable users =function.getTableParameterList().getTable("USERLIST");
+            for (int i=0;i<users.getNumRows(); i++) {
+                users.setRow(i);
+                String username = users.getString("USERNAME");
+                result.add(username);
+            }
+            return result;
+        } catch (Exception e) {
+            LoggingError("BAPI_USER_GETLIST to destination " + destName + " failed.");
+            printStackTrace(e);
+            return result;
         }
     }
 
