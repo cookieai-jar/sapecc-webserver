@@ -34,7 +34,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Dec 2023 Build v1.3.1";
+    public static final String version = "Dec 2023 Build v1.4";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
     static List<String> logBuffer = Collections.synchronizedList(new ArrayList<String>());
 
@@ -63,6 +63,7 @@ public class App
         RetrieveLogHandler logHandler = new RetrieveLogHandler();
 
         PingHandler pingHandler = new PingHandler();
+        ListUserHandler listUserHandler = new ListUserHandler();
         LockHandler lockHandler = new LockHandler();
         CreateUserHandler createUserHandler = new CreateUserHandler();
         SyncUserHandler syncUserHandler = new SyncUserHandler();
@@ -84,6 +85,7 @@ public class App
             .post("/modify_user", modifyUserHandler)
 	        .post("/assign_groups", assignGroupHandler)
             .post("/user_detail", getUserDetailHandler)
+            .post("/list_users", listUserHandler)
 	        .start();
     }
 
@@ -165,23 +167,6 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
-                    LOGGER.info("=================================");
-                    List<String> userList = getUserList(sapServer.host);
-                    for (int i=0;i< userList.size();i++) {
-                        LOGGER.info("username: " + userList.get(i));
-                    }
-                    LOGGER.info("User count" + userList.size());
-                    LOGGER.info("=================================");
-                    List<String> groupList = getGroupList(sapServer.host);
-                    for (int i=0;i< groupList.size();i++) {
-                        String groupName = groupList.get(i);
-                        if (groupName.contains("AUTHOR") || groupName.contains("USER")) {
-                            LOGGER.info("groupname: " + groupName);
-                        }
-                    }
-                    LOGGER.info("Group count" + groupList.size());
-                    LOGGER.info("=================================");
-
                     String message = pingDestination(sapServer.host);
                     if ("".equals(message)) {
                         LoggingInfo("Ping OK");
@@ -503,6 +488,40 @@ public class App
         }
     }
 
+    private static class ListUserHandler implements Handler {
+        @Override
+        public void handle(Context ctx) {
+            String body = ctx.body();
+            try {
+                SapServer sapServer = mapper.readValue(body, SapServer.class);
+                if (sapServer.host.isEmpty() || sapServer.client.isEmpty() || sapServer.jcoPassword.isEmpty()
+                    || sapServer.jcoUser.isEmpty() || sapServer.systemNumber.isEmpty() ) {
+                    // This is invalid input
+                    ctx.result("Invalid sap instance, missing at least one of host,client,systemNumber,jcoUser or jcoPassword");
+                    ctx.status(400);
+                    return;
+                }
+                LoggingInfo(getCurrentTimeString() + ": List User " + sapServer);
+                if (sapServer.isTestingServer) {
+                    List<String> userList = getFakedUserList(sapServer.host);
+                    ctx.result(mapper.writeValueAsString(userList));
+                    ctx.status(200);
+                    return;
+                }
+                synchronized(memoryProvider) {
+                    memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
+                    List<String> userList = getUserList(sapServer.host);
+                    ctx.result(mapper.writeValueAsString(userList));
+                }
+            }  catch (Exception exception) {
+                LoggingError("Failed to list users:" + exception.toString());
+                ctx.status(500);
+                ctx.result(exception.getMessage());
+                throw new Error(exception);
+            }
+        }
+    }
+    
     private static String pingDestination(String destName)
     {
         try {
@@ -548,7 +567,11 @@ public class App
         }
 
     }
-    private static List<String> getUserList(String destName) {
+
+    private static List<String> getFakedUserList(String destName) {
+        return Arrays.asList(new String[]{"USER1", "USER2"});
+    }
+    private static List<String> getUserList(String destName) throws Exception{
         ArrayList<String> result = new ArrayList<>();
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
@@ -566,7 +589,7 @@ public class App
         } catch (Exception e) {
             LoggingError("BAPI_USER_GETLIST to destination " + destName + " failed.");
             printStackTrace(e);
-            return result;
+            throw e;
         }
     }
 
@@ -1152,6 +1175,7 @@ public class App
         for (int i=0;i<formatList.length;i++) {
             Date date = getDateFormStringAndFormat(dateString, formatList[i]);
             if (date != null) {
+                LOGGER.info("!!!!!! format is"+ formatList[i] + " ,date is :" + date);
                 return date;
             }
         }
