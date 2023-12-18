@@ -168,13 +168,18 @@ public class App
                     LOGGER.info("=================================");
                     List<String> userList = getUserList(sapServer.host);
                     for (int i=0;i< userList.size();i++) {
-                        LOGGER.info("username:" + userList.get(i));
+                        LOGGER.info("username: " + userList.get(i));
                     }
+                    LOGGER.info("User count" + userList.size());
                     LOGGER.info("=================================");
                     List<String> groupList = getGroupList(sapServer.host);
                     for (int i=0;i< groupList.size();i++) {
-                        LOGGER.info("groupname:" + groupList.get(i));
+                        String groupName = groupList.get(i);
+                        if (groupName.contains("AUTHOR") || groupName.contains("SAP") || groupName.contains("USER")) {
+                            LOGGER.info("groupname: " + groupName);
+                        }
                     }
+                    LOGGER.info("Group count" + groupList.size());
                     LOGGER.info("=================================");
 
                     String message = pingDestination(sapServer.host);
