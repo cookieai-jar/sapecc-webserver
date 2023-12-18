@@ -1175,7 +1175,6 @@ public class App
         for (int i=0;i<formatList.length;i++) {
             Date date = getDateFormStringAndFormat(dateString, formatList[i]);
             if (date != null) {
-                LOGGER.info("!!!!!! format is"+ formatList[i] + " ,date is :" + date);
                 return date;
             }
         }
@@ -1183,6 +1182,9 @@ public class App
     }
 
     public static Date getDateFormStringAndFormat(final String dateString, final String format) {
+        if (dateString.length() > format.length() + 5) {
+            return null;
+        }
         Calendar c1 = Calendar.getInstance();
         c1.set(1900, 0, 1, 0, 0);
         Calendar c2 = Calendar.getInstance();
