@@ -165,7 +165,7 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
-                    /*LOGGER.info("=================================");
+                    LOGGER.info("=================================");
                     List<String> userList = getUserList(sapServer.host);
                     for (int i=0;i< userList.size();i++) {
                         LOGGER.info("username:" + userList.get(i));
@@ -175,7 +175,7 @@ public class App
                     for (int i=0;i< groupList.size();i++) {
                         LOGGER.info("groupname:" + groupList.get(i));
                     }
-                    LOGGER.info("=================================");*/
+                    LOGGER.info("=================================");
 
                     String message = pingDestination(sapServer.host);
                     if ("".equals(message)) {
@@ -516,19 +516,20 @@ public class App
         ArrayList<String> result = new ArrayList<>();
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
-            JCoFunction function=destination.getRepository().getFunction("PRGN_GET_ROLES");
+            JCoFunction function=destination.getRepository().getFunction("RFC_GET_TABLE_ENTRIES");
             if (function==null)
-                throw new RuntimeException("PRGN_GET_ROLES not found in SAP.");
+                throw new RuntimeException("RFC_GET_TABLE_ENTRIES not found in SAP.");
+            function.getImportParameterList().setValue("TABLE_NAME", "AGR_DEFINE");
             function.execute(destination);
-            JCoTable groups =function.getTableParameterList().getTable("SINGLE_ROLES");
+            JCoTable groups =function.getTableParameterList().getTable("ENTRIES");
             for (int i=0;i<groups.getNumRows(); i++) {
                 groups.setRow(i);
-                String groupname = groups.getString("AGR_NAME");
+                String groupname = groups.getString("WA");
                 result.add(groupname);
             }
             return result;
         } catch (Exception e) {
-            LoggingError("PRGN_GET_ROLES to destination " + destName + " failed.");
+            LoggingError("RFC_GET_TABLE_ENTRIE to destination " + destName + " failed.");
             printStackTrace(e);
             return result;
         }
