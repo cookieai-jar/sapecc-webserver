@@ -1175,6 +1175,7 @@ public class App
         for (int i=0;i<formatList.length;i++) {
             Date date = getDateFormStringAndFormat(dateString, formatList[i]);
             if (date != null) {
+                LOGGER.info("!!!!! " + date+ "   ," + formatList[i]);
                 return date;
             }
         }
