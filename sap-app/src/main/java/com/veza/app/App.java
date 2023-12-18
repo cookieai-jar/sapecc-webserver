@@ -524,8 +524,9 @@ public class App
             JCoTable groups =function.getTableParameterList().getTable("ENTRIES");
             for (int i=0;i<groups.getNumRows(); i++) {
                 groups.setRow(i);
-                String groupname = groups.getString("WA");
-                result.add(groupname);
+                String str = groups.getString("WA");
+                String[] splitStr = str.trim().split("\\s+");
+                result.add(splitStr[0]);
             }
             return result;
         } catch (Exception e) {
