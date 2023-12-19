@@ -401,7 +401,7 @@ func (c *Client) GetUserSummaryList(ctx context.Context, vezaServerUrl string, p
 }
 
 func (c *Client) GetRoleSummaryList(ctx context.Context, vezaServerUrl string, port int) ([]SapEccRoleSummary, error) {
-	url := fmt.Sprintf("%s:%d/role_lists", vezaServerUrl, port)
+	url := fmt.Sprintf("%s:%d/list_roles", vezaServerUrl, port)
 	sapServer := c.getSapServer()
 	b, err := c.PerformPost(ctx, url, sapServer)
 	if err != nil {
