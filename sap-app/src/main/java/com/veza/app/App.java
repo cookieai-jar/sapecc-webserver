@@ -503,14 +503,14 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() + ": List User " + sapServer);
                 if (sapServer.isTestingServer) {
-                    List<String> userList = getFakedUserList(sapServer.host);
+                    List<SapUserSummary> userList = getFakedUserList(sapServer.host);
                     ctx.result(mapper.writeValueAsString(userList));
                     ctx.status(200);
                     return;
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
-                    List<String> userList = getUserList(sapServer.host);
+                    List<SapUserSummary> userList = getUserList(sapServer.host);
                     ctx.result(mapper.writeValueAsString(userList));
                 }
             }  catch (Exception exception) {
@@ -568,11 +568,11 @@ public class App
 
     }
 
-    private static List<String> getFakedUserList(String destName) {
-        return Arrays.asList(new String[]{"USER1", "USER2"});
+    private static List<SapUserSummary> getFakedUserList(String destName) {
+        return Arrays.asList();
     }
-    private static List<String> getUserList(String destName) throws Exception{
-        ArrayList<String> result = new ArrayList<>();
+    private static List<SapUserSummary> getUserList(String destName) throws Exception{
+        ArrayList<SapUserSummary> result = new ArrayList<>();
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("BAPI_USER_GETLIST");
@@ -582,8 +582,14 @@ public class App
             JCoTable users =function.getTableParameterList().getTable("USERLIST");
             for (int i=0;i<users.getNumRows(); i++) {
                 users.setRow(i);
+                SapUserSummary sapUser = new SapUserSummary();
                 String username = users.getString("USERNAME");
-                result.add(username);
+                String firstname = users.getString("FISRTNAME");
+                String lastname = users.getString("FISRTNAME");
+                sapUser.username = username;
+                sapUser.firstname = firstname;
+                sapUser.lastname = lastname;
+                result.add(sapUser);
             }
             return result;
         } catch (Exception e) {
@@ -1118,6 +1124,12 @@ public class App
                    +", department="+department+", function="+function+", email="+email+", validFrom="+validFrom+", validTo="+validTo
                    +", licenseType="+licenseType+", deativatePassword="+deactivatePassword+", paramters="+parameters+"}";
         }
+    }
+
+    private static class SapUserSummary {
+        public String username;
+        public String firstname;
+        public String lastname;
     }
 
     private static class SapUserDetail {
