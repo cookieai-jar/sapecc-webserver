@@ -34,7 +34,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Dec 2023 Build v1.4";
+    public static final String version = "Dec 2023 Build v1.3.2";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
     static List<String> logBuffer = Collections.synchronizedList(new ArrayList<String>());
 
@@ -1162,10 +1162,10 @@ public class App
 
     public static Date getDateFromString(final String dateString) {
         String[] formatList = new String[]{
+            "yyyy-MM-dd",
+            "yyyy/MM/dd",
             "MM/dd/yyyy",
             "MM-dd-yyyy",
-            "yyyy/MM/dd",
-            "yyyy-MM-dd",
             "yyyy-MM-dd'T'HH:mm:ss'Z'",
             "yyyy-MM-dd'T'HH:mm:ssZ",
             "yyyy-MM-dd'T'HH:mm:ss",
@@ -1175,7 +1175,6 @@ public class App
         for (int i=0;i<formatList.length;i++) {
             Date date = getDateFormStringAndFormat(dateString, formatList[i]);
             if (date != null) {
-                LOGGER.info("!!!!! " + date+ "   ," + formatList[i]);
                 return date;
             }
         }
@@ -1183,18 +1182,13 @@ public class App
     }
 
     public static Date getDateFormStringAndFormat(final String dateString, final String format) {
-        if (dateString.length() > format.length() + 5) {
-            return null;
-        }
         Calendar c1 = Calendar.getInstance();
         c1.set(1900, 0, 1, 0, 0);
-        Calendar c2 = Calendar.getInstance();
-        c2.set(2100, 0, 1, 0, 0);
         try {
             SimpleDateFormat df = new SimpleDateFormat(format);
             df.setLenient(false);
             Date date = df.parse(dateString);
-            if (date.before(c1.getTime()) || date.after(c2.getTime())) {
+            if (date.before(c1.getTime())) {
                 return null;
             }
             return date;
