@@ -462,7 +462,8 @@ public class App
                 }
                 LoggingInfo(getCurrentTimeString() +": Get User Detail " + request);
                 if (request.server.isTestingServer) {
-                    ctx.result("{}");
+                    SapUserDetail userDetail = getFakedUserDetail(request.server.host, request.username);
+                    ctx.result(userDetail.toString());
                     ctx.status(200);
                     return;
                 }
@@ -609,11 +610,34 @@ public class App
         sapRole.name = "SAP_FAKE_USER";
         return Arrays.asList(new SapRoleSummary[]{sapRole});
     }
-    
+
     private static List<SapUserSummary> getFakedUserList(String destName) {
         SapUserSummary sapUser = new SapUserSummary();
         sapUser.username = "FAKEUSER1";
         return Arrays.asList(new SapUserSummary[]{sapUser});
+    }
+
+    private static SapUserDetail getFakedUserDetail(String destName, String username) {
+        SapUserDetail detail = new SapUserDetail();
+        detail.username = username;
+        if (username.equals("FAKEUSER1")) {
+            detail.firstname = "Fake";
+            detail.lastname = "User1";
+            detail.licenseType = "91";
+            detail.department = "dept1";
+            detail.email = "fakeuser@sap.com";
+            detail.function = "func1";
+            detail.validFrom = "12/31/2023";
+            detail.validTo = "11/25/2024";
+            detail.parameters = new HashMap<String, String>();
+            detail.parameters.put("/BA1/F4_EXCH", "test");
+            UserGroup[] userGroups = new UserGroup[1];
+            userGroups[0] = new UserGroup();
+            userGroups[0].group = "SAP_FAKE_USER";
+            detail.userGroups = userGroups;
+            return detail;
+        }
+        return detail;
     }
 
     private static List<SapUserSummary> getUserList(String destName) throws Exception{
