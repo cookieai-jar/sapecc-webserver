@@ -584,8 +584,8 @@ public class App
                 users.setRow(i);
                 SapUserSummary sapUser = new SapUserSummary();
                 String username = users.getString("USERNAME");
-                String firstname = users.getString("FISRTNAME");
-                String lastname = users.getString("FISRTNAME");
+                String firstname = users.getString("FIRSTNAME");
+                String lastname = users.getString("LASTNAME");
                 sapUser.username = username;
                 sapUser.firstname = firstname;
                 sapUser.lastname = lastname;
