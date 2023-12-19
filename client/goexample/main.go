@@ -54,6 +54,29 @@ type SapActivityGroup struct {
 	ToDate   string `json:"toDate"`
 }
 
+type SapEccUserDetailResponse struct {
+	Username           string             `json:"username"`
+	Firstname          string             `json:"firstname,omitempty"`
+	Lastname           string             `json:"lastname,omitempty"`
+	LicenseType        string             `json:"licenseType,omitempty"`
+	Department         string             `json:"department,omitempty"`
+	Function           string             `json:"function,omitempty"`
+	Email              string             `json:"email,omitempty"`
+	ValidFrom          string             `json:"validFrom,omitempty"`
+	ValidTo            string             `json:"validTo,omitempty"`
+	DeactivatePassword bool               `json:"deactivatePassword,omitempty"`
+	Parameters         map[string]string  `json:"parameters,omitempty"`
+	UserGroups         []SapActivityGroup `json:"userGroups"`
+}
+
+type SapEccUserSummary struct {
+	Username string `json:"username"`
+}
+
+type SapEccRoleSummary struct {
+	Name string `json:"name"`
+}
+
 type SapEccAssignUserGroupRequest struct {
 	Server     SapEccServer       `json:"server"`
 	Username   string             `json:"username"`
@@ -109,7 +132,7 @@ func main() {
 	}
 	fmt.Println("Server is OK")
 
-	username := "TESTUSER6"
+	/*username := "TESTUSER6"
 	password := "Veza123!"
 	firstname := "FirstnameSix"
 	lastname := "John"
@@ -139,7 +162,14 @@ func main() {
 		fmt.Println("Unable to Lock User " + username)
 		return
 	}
-	fmt.Println("Lock user is OK")
+	fmt.Println("Lock user is OK")*/
+
+	userList, err := client.GetUserSummaryList(ctx, url, port)
+	if err != nil {
+		fmt.Println("Unable to list User err: " + err.Error())
+		return
+	}
+	fmt.Printf("the list is %v\n", userList)
 }
 
 func (c *Client) GetVersion(ctx context.Context, vezaServerUrl string, port int) (string, error) {
@@ -298,4 +328,49 @@ func (c *Client) AssignUserGroups(ctx context.Context, vezaServerUrl string, por
 		return errors.New(fmt.Sprintf("Invalid status code %d", resp.StatusCode))
 	}
 	return nil
+}
+
+func (c *Client) GetUserSummaryList(ctx context.Context, vezaServerUrl string, port int) ([]*SapEccUserSummary, error) {
+	url := fmt.Sprintf("%s:%d/list_users", vezaServerUrl, port)
+	sapServer := c.getSapServer()
+	b, err := c.PerformPost(ctx, url, sapServer)
+	if err != nil {
+		return nil, err
+	}
+	result := []*SapEccUserSummary{}
+	if err := json.Unmarshal(b, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *Client) PerformPost(ctx context.Context, url string, request interface{}) ([]byte, error) {
+	body, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		// TODO: get more from the https response body
+		fmt.Printf("Unable to get response url %s with statusCode %d, err %s\n", url, resp.StatusCode, err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Printf("Fail with Veza sap server url %s err_message %s", url, string(b))
+		return nil, fmt.Errorf("invalid status code %d, error_message %s", resp.StatusCode, string(b))
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
