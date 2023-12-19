@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -175,8 +176,8 @@ func main() {
 		return
 	}
 	// fmt.Printf("the list is %+v\n", userList)
-	fmt.Printf("the list count is %d\n", len(userList))
-	for i, user := range userList {
+	fmt.Printf("the user list count is %d\n", len(userList))
+	/*for i, user := range userList {
 		resp, err := client.GetUserDetail(ctx, url, port, user.Username)
 		if err != nil {
 			fmt.Printf("Unable to retrieve user detail for user %s, err: %s", user.Username, err.Error())
@@ -185,7 +186,19 @@ func main() {
 		if i%100 == 0 {
 			fmt.Printf("First name %s, last name %s, username %s\n", resp.Firstname, resp.Lastname, resp.Username)
 		}
+	}*/
+
+	roleList, err := client.GetRoleSummaryList(ctx, url, port)
+	if err != nil {
+		fmt.Println("Unable to list User err: " + err.Error())
+		return
 	}
+	for i, role := range roleList {
+		if strings.Contains(strings.ToLower(role.Name), "user") {
+			fmt.Printf("index: %d, Role: %s\n", i, role.Name)
+		}
+	}
+	fmt.Printf("the role list count is %d\n", len(roleList))
 
 	/*userDetail, err := client.GetUserDetail(ctx, url, port, username)
 	if err != nil {
@@ -384,6 +397,20 @@ func (c *Client) GetUserSummaryList(ctx context.Context, vezaServerUrl string, p
 		return nil, err
 	}
 	c.DumpLog(ctx, vezaServerUrl, port)
+	return result, nil
+}
+
+func (c *Client) GetRoleSummaryList(ctx context.Context, vezaServerUrl string, port int) ([]SapEccRoleSummary, error) {
+	url := fmt.Sprintf("%s:%d/role_lists", vezaServerUrl, port)
+	sapServer := c.getSapServer()
+	b, err := c.PerformPost(ctx, url, sapServer)
+	if err != nil {
+		return nil, err
+	}
+	result := []SapEccRoleSummary{}
+	if err := json.Unmarshal(b, &result); err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
