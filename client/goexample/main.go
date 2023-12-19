@@ -411,6 +411,7 @@ func (c *Client) GetRoleSummaryList(ctx context.Context, vezaServerUrl string, p
 	if err := json.Unmarshal(b, &result); err != nil {
 		return nil, err
 	}
+	c.DumpLog(ctx, vezaServerUrl, port)
 	return result, nil
 }
 
