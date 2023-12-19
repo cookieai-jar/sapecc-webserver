@@ -137,7 +137,7 @@ func main() {
 	}
 	fmt.Println("Server is OK")
 
-	username := "TESTYING6"
+	//username := "TESTYING6"
 	/*password := "Veza123!"
 	firstname := "FirstnameSix"
 	lastname := "John"
@@ -174,15 +174,25 @@ func main() {
 		fmt.Println("Unable to list User err: " + err.Error())
 		return
 	}
-	fmt.Printf("the list is %+v\n", userList)
-	fmt.Printf("the list  count is %d\n", len(userList))
+	// fmt.Printf("the list is %+v\n", userList)
+	fmt.Printf("the list count is %d\n", len(userList))
+	for i, user := range userList {
+		resp, err := client.GetUserDetail(ctx, url, port, user.Username)
+		if err != nil {
+			fmt.Printf("Unable to retrieve user detail for user %s, err: %s", user.Username, err.Error())
+		}
+		fmt.Print(".")
+		if i%100 == 0 {
+			fmt.Printf("First name %s, last name %s, username %s\n", resp.Firstname, resp.Lastname, resp.Username)
+		}
+	}
 
-	userDetail, err := client.GetUserDetail(ctx, url, port, username)
+	/*userDetail, err := client.GetUserDetail(ctx, url, port, username)
 	if err != nil {
 		fmt.Println("Unable to get User Detail err: " + err.Error())
 		return
 	}
-	fmt.Printf("the user detail is %+v\n", userDetail)
+	fmt.Printf("the user detail is %+v\n", userDetail) */
 }
 
 func (c *Client) GetVersion(ctx context.Context, vezaServerUrl string, port int) (string, error) {
@@ -358,7 +368,7 @@ func (c *Client) GetUserDetail(ctx context.Context, vezaServerUrl string, port i
 	if err := json.Unmarshal(b, &result); err != nil {
 		return nil, err
 	}
-	c.DumpLog(ctx, vezaServerUrl, port)
+	// c.DumpLog(ctx, vezaServerUrl, port)
 	return &result, nil
 }
 
