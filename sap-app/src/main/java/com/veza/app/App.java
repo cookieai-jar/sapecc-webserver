@@ -34,7 +34,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Dec 2023 Build v1.3.2";
+    public static final String version = "Dec 2023 Build v1.4";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
     static List<String> logBuffer = Collections.synchronizedList(new ArrayList<String>());
 
@@ -64,6 +64,7 @@ public class App
 
         PingHandler pingHandler = new PingHandler();
         ListUserHandler listUserHandler = new ListUserHandler();
+        ListRoleHandler listRoleHandler = new ListRoleHandler();
         LockHandler lockHandler = new LockHandler();
         CreateUserHandler createUserHandler = new CreateUserHandler();
         SyncUserHandler syncUserHandler = new SyncUserHandler();
@@ -86,6 +87,7 @@ public class App
 	        .post("/assign_groups", assignGroupHandler)
             .post("/user_detail", getUserDetailHandler)
             .post("/list_users", listUserHandler)
+            .post("/list_roles", listRoleHandler)
 	        .start();
     }
 
@@ -522,6 +524,40 @@ public class App
         }
     }
     
+    private static class ListRoleHandler implements Handler {
+        @Override
+        public void handle(Context ctx) {
+            String body = ctx.body();
+            try {
+                SapServer sapServer = mapper.readValue(body, SapServer.class);
+                if (sapServer.host.isEmpty() || sapServer.client.isEmpty() || sapServer.jcoPassword.isEmpty()
+                    || sapServer.jcoUser.isEmpty() || sapServer.systemNumber.isEmpty() ) {
+                    // This is invalid input
+                    ctx.result("Invalid sap instance, missing at least one of host,client,systemNumber,jcoUser or jcoPassword");
+                    ctx.status(400);
+                    return;
+                }
+                LoggingInfo(getCurrentTimeString() + ": List Role " + sapServer);
+                if (sapServer.isTestingServer) {
+                    List<SapRoleSummary> userList = getFakedRoleList(sapServer.host);
+                    ctx.result(mapper.writeValueAsString(userList));
+                    ctx.status(200);
+                    return;
+                }
+                synchronized(memoryProvider) {
+                    memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
+                    List<SapRoleSummary> roleList = getRoleList(sapServer.host);
+                    ctx.result(mapper.writeValueAsString(roleList));
+                }
+            }  catch (Exception exception) {
+                LoggingError("Failed to list users:" + exception.toString());
+                ctx.status(500);
+                ctx.result(exception.getMessage());
+                throw new Error(exception);
+            }
+        }
+    }
+
     private static String pingDestination(String destName)
     {
         try {
@@ -536,8 +572,8 @@ public class App
         }
     }
 
-    private static List<String> getGroupList(String destName) {
-        ArrayList<String> result = new ArrayList<>();
+    private static List<SapRoleSummary> getRoleList(String destName) {
+        ArrayList<SapRoleSummary> result = new ArrayList<>();
         try {
             JCoDestination destination=JCoDestinationManager.getDestination(destName);
             JCoFunction function=destination.getRepository().getFunction("PRGN_GET_ROLES");
@@ -548,16 +584,16 @@ public class App
             JCoTable groups =function.getTableParameterList().getTable("SINGLE_ROLES");
             for (int i=0;i<groups.getNumRows(); i++) {
                 groups.setRow(i);
-                String str = groups.getString("AGR_NAME");
-                //String[] splitStr = str.trim().split("\\s+");
-                result.add(str);
+                SapRoleSummary role = new SapRoleSummary();
+                role.name = groups.getString("AGR_NAME");
+                result.add(role);
             }
             groups =function.getTableParameterList().getTable("COLLCT_ROLES");
             for (int i=0;i<groups.getNumRows(); i++) {
                 groups.setRow(i);
-                String str = groups.getString("AGR_NAME");
-                //String[] splitStr = str.trim().split("\\s+");
-                result.add(str);
+                SapRoleSummary role = new SapRoleSummary();
+                role.name = groups.getString("AGR_NAME");
+                result.add(role);
             }
             return result;
         } catch (Exception e) {
@@ -568,9 +604,18 @@ public class App
 
     }
 
-    private static List<SapUserSummary> getFakedUserList(String destName) {
-        return Arrays.asList();
+    private static List<SapRoleSummary> getFakedRoleList(String destName) {
+        SapRoleSummary sapRole = new SapRoleSummary();
+        sapRole.name = "SAP_FAKE_USER";
+        return Arrays.asList(new SapRoleSummary[]{sapRole});
     }
+    
+    private static List<SapUserSummary> getFakedUserList(String destName) {
+        SapUserSummary sapUser = new SapUserSummary();
+        sapUser.username = "FAKEUSER1";
+        return Arrays.asList(new SapUserSummary[]{sapUser});
+    }
+
     private static List<SapUserSummary> getUserList(String destName) throws Exception{
         ArrayList<SapUserSummary> result = new ArrayList<>();
         try {
@@ -584,13 +629,7 @@ public class App
                 users.setRow(i);
                 SapUserSummary sapUser = new SapUserSummary();
                 String username = users.getString("USERNAME");
-                String firstname = users.getString("FIRSTNAME");
-                String lastname = users.getString("LASTNAME");
-                String fullname = users.getString("FULLNAME");
                 sapUser.username = username;
-                sapUser.firstname = firstname;
-                sapUser.lastname = lastname;
-                sapUser.fullname = fullname;
                 result.add(sapUser);
             }
             return result;
@@ -1130,9 +1169,10 @@ public class App
 
     private static class SapUserSummary {
         public String username;
-        public String firstname;
-        public String lastname;
-        public String fullname;
+    }
+
+    private static class SapRoleSummary {
+        public String name;
     }
 
     private static class SapUserDetail {
