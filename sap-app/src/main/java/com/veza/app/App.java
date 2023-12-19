@@ -1241,15 +1241,15 @@ public class App
 
     public static Date getDateFromString(final String dateString) {
         String[] formatList = new String[]{
-            "yyyy-MM-dd",
-            "yyyy/MM/dd",
             "MM/dd/yyyy",
             "MM-dd-yyyy",
+            "yyyy/MM/dd",
+            "yyyy-MM-dd",
             "yyyy-MM-dd'T'HH:mm:ss'Z'",
             "yyyy-MM-dd'T'HH:mm:ssZ",
             "yyyy-MM-dd'T'HH:mm:ss",
             "yyyy-MM-dd HH:mm:ss",
-            "yyyy-MM-dd HH:mm:ssZ"
+            "yyyy-MM-dd'T'HH:mm:ssZ"
         };
         for (int i=0;i<formatList.length;i++) {
             Date date = getDateFormStringAndFormat(dateString, formatList[i]);
