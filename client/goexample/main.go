@@ -169,7 +169,8 @@ func main() {
 		fmt.Println("Unable to list User err: " + err.Error())
 		return
 	}
-	fmt.Printf("the list is %v\n", userList)
+	fmt.Printf("the list is %+v\n", userList)
+	fmt.Printf("the list  count is %d\n", len(userList))
 }
 
 func (c *Client) GetVersion(ctx context.Context, vezaServerUrl string, port int) (string, error) {
@@ -330,14 +331,14 @@ func (c *Client) AssignUserGroups(ctx context.Context, vezaServerUrl string, por
 	return nil
 }
 
-func (c *Client) GetUserSummaryList(ctx context.Context, vezaServerUrl string, port int) ([]*SapEccUserSummary, error) {
+func (c *Client) GetUserSummaryList(ctx context.Context, vezaServerUrl string, port int) ([]SapEccUserSummary, error) {
 	url := fmt.Sprintf("%s:%d/list_users", vezaServerUrl, port)
 	sapServer := c.getSapServer()
 	b, err := c.PerformPost(ctx, url, sapServer)
 	if err != nil {
 		return nil, err
 	}
-	result := []*SapEccUserSummary{}
+	result := []SapEccUserSummary{}
 	if err := json.Unmarshal(b, &result); err != nil {
 		return nil, err
 	}
