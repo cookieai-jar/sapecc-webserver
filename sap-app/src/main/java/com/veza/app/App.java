@@ -586,9 +586,11 @@ public class App
                 String username = users.getString("USERNAME");
                 String firstname = users.getString("FIRSTNAME");
                 String lastname = users.getString("LASTNAME");
+                String fullname = users.getString("FULLNAME");
                 sapUser.username = username;
                 sapUser.firstname = firstname;
                 sapUser.lastname = lastname;
+                sapUser.fullname = fullname;
                 result.add(sapUser);
             }
             return result;
@@ -1130,6 +1132,7 @@ public class App
         public String username;
         public String firstname;
         public String lastname;
+        public String fullname;
     }
 
     private static class SapUserDetail {
