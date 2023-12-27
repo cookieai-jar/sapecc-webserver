@@ -514,10 +514,11 @@ public class App
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
                     List<SapUserSummary> userList = getUserList(sapServer.host);
+                    LoggingInfo("List User OK, User count: " + userList.size());
                     ctx.result(mapper.writeValueAsString(userList));
                 }
             }  catch (Exception exception) {
-                LoggingError("Failed to list users:" + exception.toString());
+                LoggingError("List User Failed:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
@@ -548,10 +549,11 @@ public class App
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapServer.host, getDestinationPropertiesFromStruct(sapServer));
                     List<SapRoleSummary> roleList = getRoleList(sapServer.host);
+                    LoggingInfo("List Role OK, Role count: " + roleList.size());
                     ctx.result(mapper.writeValueAsString(roleList));
                 }
             }  catch (Exception exception) {
-                LoggingError("Failed to list users:" + exception.toString());
+                LoggingError("List Role Failed:" + exception.toString());
                 ctx.status(500);
                 ctx.result(exception.getMessage());
                 throw new Error(exception);
