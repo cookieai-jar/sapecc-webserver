@@ -255,7 +255,7 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LoggingInfo(getCurrentTimeString() +": Create User " + sapUser);
+                LoggingInfo(getCurrentTimeString() +": Modify User " + sapUser);
                 if (sapUser.server.isTestingServer) {
                     SapResult result = new SapResult();
                     if (sapUser.deactivatePassword != null && !sapUser.deactivatePassword && notEmptyString(sapUser.password)) {
@@ -427,12 +427,12 @@ public class App
                     }
                     message = lockUser(request.server.host, request.username);
                     if ("".equals(message)) {
-                        LoggingInfo("Lock user OK");
+                        LoggingInfo("Lock User OK");
 		                ctx.result("{}");
                         ctx.status(200);
                         return;
                     } else {
-                        LoggingError("Lock Failed: " + message);
+                        LoggingError("Lock User Failed: " + message);
                         ctx.result("Failed with message :" + message);
                         ctx.status(500);
                         return;
