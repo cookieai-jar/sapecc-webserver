@@ -894,21 +894,31 @@ public class App
                     passwordDataX.setValue("BAPIPWD", 'X');
                 }
                 if (notNull(validFrom)) {
-                    Date validFromDate = getDateFromString(validFrom);
-                    if (validFromDate != null) {
-                        logonData.setValue("GLTGV", validFromDate);
-                        logonDataX.setValue("GLTGV", 'X');
+                    if (notEmptyString(validFrom)) {
+                        Date validFromDate = getDateFromString(validFrom);
+                        if (validFromDate != null) {
+                            logonData.setValue("GLTGV", validFromDate);
+                            logonDataX.setValue("GLTGV", 'X');
+                        } else {
+                            LoggingError("Invalid format of valid from string: " + validFrom);
+                        }
                     } else {
-                        LoggingError("Invalid format of valid from string: " + validFrom);
+                        logonDataX.setValue("GLTGV", 'X');
+                        logonData.setValue("GLTGV", "");
                     }
                 }
                 if (notNull(validTo)) {
-                    Date validToDate = getDateFromString(validTo);
-                    if (validToDate != null) {
-                        logonData.setValue("GLTGB", validToDate);
-                        logonDataX.setValue("GLTGB", 'X');
+                    if (notEmptyString(validTo)) {
+                        Date validToDate = getDateFromString(validTo);
+                        if (validToDate != null) {
+                            logonData.setValue("GLTGB", validToDate);
+                            logonDataX.setValue("GLTGB", 'X');
+                        } else {
+                            LoggingError("Invalid format of valid to string: " + validTo);
+                        }
                     } else {
-                        LoggingError("Invalid format of valid to string: " + validTo);
+                        logonData.setValue("GLTGB", "");
+                        logonDataX.setValue("GLTGB", 'X');
                     }
                 }
             }
