@@ -34,7 +34,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Dec 2023 Build v1.4";
+    public static final String version = "Jan 2024 Build v1.5";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
     static List<String> logBuffer = Collections.synchronizedList(new ArrayList<String>());
 
@@ -851,7 +851,7 @@ public class App
             if (function==null)
                 throw new RuntimeException("BAPI_USER_CHANGE not found in SAP.");
             function.getImportParameterList().setValue("USERNAME", username);
-            if (notEmptyString(licenseType)) {
+            if (notNull(licenseType)) {
                 JCoStructure uClass = function.getImportParameterList().getStructure("UCLASS");
                 uClass.setValue("LIC_TYPE", licenseType);
                 // Add the change indicator for uclass
@@ -859,7 +859,7 @@ public class App
                 uClassX.setValue("UCLASS", 'X');
                 // uClassX.setValue("UCLASSSYS", 'R');
             }
-            if (parametersMap != null && parametersMap.size() > 0) {
+            if (parametersMap != null) {
                 JCoTable parameters=function.getTableParameterList().getTable("PARAMETER");
                 for (String key : parametersMap.keySet()) {
                     parameters.appendRow();
@@ -872,7 +872,7 @@ public class App
                 parameterX.setValue("PARID", 'X');
                 parameterX.setValue("PARVA", 'X');
             }
-            if (deactivatePassword != null || notEmptyString(validFrom) || notEmptyString(validTo)) {
+            if (deactivatePassword != null || notNull(validFrom) || notNull(validTo)) {
                 JCoStructure logonData = function.getImportParameterList().getStructure("LOGONDATA");
                 JCoStructure logonDataX = function.getImportParameterList().getStructure("LOGONDATAX");
                 if (deactivatePassword != null && deactivatePassword) {
@@ -893,7 +893,7 @@ public class App
                     JCoStructure passwordDataX = function.getImportParameterList().getStructure("PASSWORDX");
                     passwordDataX.setValue("BAPIPWD", 'X');
                 }
-                if (notEmptyString(validFrom)) {
+                if (notNull(validFrom)) {
                     Date validFromDate = getDateFromString(validFrom);
                     if (validFromDate != null) {
                         logonData.setValue("GLTGV", validFromDate);
@@ -902,7 +902,7 @@ public class App
                         LoggingError("Invalid format of valid from string: " + validFrom);
                     }
                 }
-                if (notEmptyString(validTo)) {
+                if (notNull(validTo)) {
                     Date validToDate = getDateFromString(validTo);
                     if (validToDate != null) {
                         logonData.setValue("GLTGB", validToDate);
@@ -913,26 +913,26 @@ public class App
                 }
             }
 
-            if (notEmptyString(firstname) || notEmptyString(lastname) || notEmptyString(functionStr) || notEmptyString(department) || notEmptyString(email)) {
+            if (notNull(firstname) || notNull(lastname) || notNull(functionStr) || notNull(department) || notNull(email)) {
                 JCoStructure address = function.getImportParameterList().getStructure("ADDRESS");
                 JCoStructure addressX = function.getImportParameterList().getStructure("ADDRESSX");
-                if (notEmptyString(firstname)) {
+                if (notNull(firstname)) {
                     address.setValue("FIRSTNAME", firstname);
                     addressX.setValue("FIRSTNAME", 'X');
                 }
-                if (notEmptyString(lastname)) {
+                if (notNull(lastname)) {
                     address.setValue("LASTNAME", firstname);
                     addressX.setValue("LASTNAME", 'X');
                 }
-                if (notEmptyString(functionStr)) {
+                if (notNull(functionStr)) {
                     address.setValue("FUNCTION", functionStr);
                     addressX.setValue("FUNCTION", 'X');
                 }
-                if (notEmptyString(department)) {
+                if (notNull(department)) {
                     address.setValue("DEPARTMENT", department);
                     addressX.setValue("DEPARTMENT", 'X');
                 }
-                if (notEmptyString(email)) {
+                if (notNull(email)) {
                     address.setValue("E_MAIL", email);
                     addressX.setValue("E_MAIL", 'X');
                 }
@@ -1276,6 +1276,10 @@ public class App
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public static boolean notNull(final String s) {
+        return s != null;
     }
 
     public static boolean notEmptyString( final String s ) {
