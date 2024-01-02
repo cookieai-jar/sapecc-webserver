@@ -418,7 +418,7 @@ public class App
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
                     // First remove all activity groups from current user
-                    String message = removeParameterAndLicenseTypeAndGroups(request.server.host, request.username);
+                    String message = removeParameterAndLicenseTypeAndGroups(request.server.host, request.username, request.validTo);
                     if (!"".equals(message)) {
                         LoggingError("Lock Failed, Unable to remove all roles from a user");
                         ctx.result("Failed with message :" + message);
@@ -793,7 +793,7 @@ public class App
         }
     }
 
-    private static String removeParameterAndLicenseTypeAndGroups(String destName, String username) {
+    private static String removeParameterAndLicenseTypeAndGroups(String destName, String username, String validTo) {
         try {
             // Remove all groups from user
             LoggingInfo("Remove all roles from user " + username);
@@ -825,6 +825,23 @@ public class App
             JCoStructure parameterX = function2.getImportParameterList().getStructure("PARAMETERX");
             parameterX.setValue("PARID", 'X');
             parameterX.setValue("PARVA", 'X');
+
+            if (notNull(validTo)) {
+                JCoStructure logonData = function2.getImportParameterList().getStructure("LOGONDATA");
+                JCoStructure logonDataX = function2.getImportParameterList().getStructure("LOGONDATAX");
+                if (notEmptyString(validTo)) {
+                    Date validToDate = getDateFromString(validTo);
+                    if (validToDate != null) {
+                        logonData.setValue("GLTGB", validToDate);
+                        logonDataX.setValue("GLTGB", 'X');
+                    } else {
+                        LoggingError("Invalid format of valid to string: " + validTo);
+                    }
+                } else {
+                    logonData.setValue("GLTGB", "");
+                    logonDataX.setValue("GLTGB", 'X');
+                }
+            }
             function2.execute(destination);
             return processFunctionReturn(function2);
         } catch (Exception e) {
@@ -1125,9 +1142,10 @@ public class App
     public static class SapLockUserRequest {
         public SapServer server;
         public String username;
+        public String validTo;
         @Override
         public String toString() {
-            return "{server="+server.toString()+", username="+username+"}";
+            return "{server="+server.toString()+", username="+username+", validTo="+validTo+"}";
         }
     }
 

@@ -30,6 +30,7 @@ type SapEccServer struct {
 type SapEccLockUserRequest struct {
 	Server   SapEccServer `json:"server"`
 	Username string       `json:"username"`
+	ValidTo  string       `json:"validTo,omitempty"`
 }
 
 type SapEccGetUserDetailRequest struct {
