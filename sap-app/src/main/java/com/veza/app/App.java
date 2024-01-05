@@ -34,7 +34,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Jan 2024 Build v1.5";
+    public static final String version = "Jan 2024 Build v1.5.1";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
     static List<String> logBuffer = Collections.synchronizedList(new ArrayList<String>());
 
