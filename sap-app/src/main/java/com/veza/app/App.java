@@ -320,9 +320,9 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(sapUser.server.host, getDestinationPropertiesFromStruct(sapUser.server));
-                    SapUserDetail userDetail = getUserDetail(sapUser.server.host, sapUser.username);
+                    Boolean useExisted = confirmUserExist(sapUser.server.host, sapUser.username);
                     SapResult sapResult;
-                    if (userDetail != null) {
+                    if (useExisted) {
                         LoggingInfo("User "+ sapUser.username +" is existed, modify user");
                         sapResult = modifyUser(sapUser.server.host, sapUser.username, sapUser.password, sapUser.firstname, sapUser.lastname,
                             sapUser.department, sapUser.function, sapUser.email, sapUser.licenseType, sapUser.validFrom, sapUser.validTo,
@@ -469,6 +469,13 @@ public class App
                 }
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
+                    Boolean userExisted = confirmUserExist(request.server.host, request.username);
+                    if (!userExisted) {
+                        LoggingError("Get User Detail Failed");
+                        ctx.result("User "+ request.username +" doesn't existed, Failed");
+                        ctx.status(500);
+                        return;
+                    }
                     SapUserDetail userDetail = getUserDetail(request.server.host, request.username);
                     if (userDetail != null) {
                         LoggingInfo("Get user detail OK");
