@@ -1083,6 +1083,9 @@ public class App
                 String activityGroupName = existingGroups.getString("AGR_NAME");
                 Date fromDate = existingGroups.getDate("FROM_DAT");
                 Date toDate = existingGroups.getDate("TO_DAT");
+                char indirect = existingGroups.getChar("ORG_FLAG");
+                LOGGER.info("!!!!! indirect" + indirect + " from group" + activityGroupName);
+
                 userGroups[i] = new UserGroup();
                 userGroups[i].group = activityGroupName;
                 userGroups[i].fromDate = fromDate;
