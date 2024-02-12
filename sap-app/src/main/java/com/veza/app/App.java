@@ -640,8 +640,8 @@ public class App
             detail.validTo = "11/25/2024";
             detail.parameters = new HashMap<String, String>();
             detail.parameters.put("/BA1/F4_EXCH", "test");
-            UserGroup[] userGroups = new UserGroup[1];
-            userGroups[0] = new UserGroup();
+            UserGroupInfo[] userGroups = new UserGroupInfo[1];
+            userGroups[0] = new UserGroupInfo();
             userGroups[0].group = "SAP_FAKE_USER";
             detail.userGroups = userGroups;
             return detail;
@@ -1076,7 +1076,7 @@ public class App
             // Get roles
             JCoTable existingGroups=function.getTableParameterList().getTable("ACTIVITYGROUPS");
             int count = existingGroups.getNumRows();
-            UserGroup[] userGroups = new UserGroup[count];
+            UserGroupInfo[] userGroups = new UserGroupInfo[count];
             for (int i=0; i<count; i++)
             {
                 existingGroups.setRow(i);
@@ -1084,12 +1084,16 @@ public class App
                 Date fromDate = existingGroups.getDate("FROM_DAT");
                 Date toDate = existingGroups.getDate("TO_DAT");
                 char indirect = existingGroups.getChar("ORG_FLAG");
-                LOGGER.info("!!!!! indirect" + indirect + " from group" + activityGroupName);
 
-                userGroups[i] = new UserGroup();
+                userGroups[i] = new UserGroupInfo();
                 userGroups[i].group = activityGroupName;
                 userGroups[i].fromDate = fromDate;
                 userGroups[i].toDate = toDate;
+                if (indirect == 'C') {
+                    userGroups[i].indirect = true;
+                } else {
+                    userGroups[i].indirect = false;
+                }
             }
             if (userGroups.length >0) {
                 result.userGroups = userGroups;
@@ -1187,6 +1191,30 @@ public class App
         }
     }
 
+    public static class UserGroupInfo {
+        public String group;
+        public Date fromDate;
+        public Date toDate;
+        public Boolean indirect;
+        @Override
+        public String toString() {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+            String fromDateString = "undefined";
+            String toDateString = "undefined";
+            String indirectString= "";
+            if (fromDate != null) {
+                fromDateString = dateFormat.format(fromDate);
+            }
+            if (toDate != null) {
+                toDateString = dateFormat.format(toDate);
+            }
+            if (indirect != null && indirect) {
+                indirectString = "(indirect)";
+            }
+            return group+indirectString +":{"+fromDateString +":" +toDateString+"}";
+        }
+    }
+
     public static class SapAssignUserGroupRequest {
         public SapServer server;
         public String username;
@@ -1253,7 +1281,7 @@ public class App
         public String validFrom;
         public String validTo;
 
-        public UserGroup[] userGroups;
+        public UserGroupInfo[] userGroups;
         public String toString() {
             try {
                 mapper.setSerializationInclusion(Include.NON_NULL);
