@@ -955,7 +955,7 @@ public class App
                     addressX.setValue("FIRSTNAME", 'X');
                 }
                 if (notNull(lastname)) {
-                    address.setValue("LASTNAME", firstname);
+                    address.setValue("LASTNAME", lastname);
                     addressX.setValue("LASTNAME", 'X');
                 }
                 if (notNull(functionStr)) {
