@@ -34,7 +34,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Jan 2024 Build v1.5.1";
+    public static final String version = "Mar 2024 Build v1.5.2";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
     static List<String> logBuffer = Collections.synchronizedList(new ArrayList<String>());
 
@@ -44,7 +44,7 @@ public class App
 
     public static void main( String[] args )
     {
-        LoggingInfo("Starting....");
+        LoggingInfo("Starting " + version + "....");
 
         SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
         mapper.setDateFormat(df);
