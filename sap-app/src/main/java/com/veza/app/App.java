@@ -1041,6 +1041,13 @@ public class App
             String emailStr = address.getString("E_MAIL");
             result.email = emailStr;
 
+            JCoStructure isLockedStruct = function.getExportParameterList().getStructure("ISLOCKED");
+            char wrongLogon = isLockedStruct.getChar("WRNG_LOGON");
+            char localLock = isLockedStruct.getChar("LOCAL_LOCK");
+            char globLock = isLockedStruct.getChar("GLOB_LOCK");
+            char noUserPW = isLockedStruct.getChar("NO_USER_PW");
+            LoggingInfo("wrongLogon:" + wrongLogon + " ,localLock:"+localLock+" ,globLock:"+globLock+" ,noUserPw:" +noUserPW);
+
             SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
             JCoStructure logonData = function.getExportParameterList().getStructure("LOGONDATA");
             Date userValidFromDate = logonData.getDate("GLTGV");
@@ -1276,6 +1283,7 @@ public class App
         public String licenseType;
         public Map<String, String> parameters;
         public boolean deactivatePassword;
+        public boolean isLocked;
         public String validFrom;
         public String validTo;
 
