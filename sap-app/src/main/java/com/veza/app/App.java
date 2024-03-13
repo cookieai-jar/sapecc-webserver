@@ -34,7 +34,7 @@ import com.sap.conn.jco.JCoTable;
 
 public class App 
 {
-    public static final String version = "Mar 2024 Build v1.5.2";
+    public static final String version = "Mar 2024 Build v1.5.3";
     private static Logger LOGGER = LoggerFactory.getLogger(App.class);
     static List<String> logBuffer = Collections.synchronizedList(new ArrayList<String>());
 
@@ -460,7 +460,6 @@ public class App
                     ctx.status(400);
                     return;
                 }
-                LoggingInfo(getCurrentTimeString() +": Get User Detail " + request);
                 if (request.server.isTestingServer) {
                     SapUserDetail userDetail = getFakedUserDetail(request.server.host, request.username);
                     ctx.result(userDetail.toString());
@@ -471,19 +470,18 @@ public class App
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
                     Boolean userExisted = confirmUserExist(request.server.host, request.username);
                     if (!userExisted) {
-                        LoggingError("Get User Detail Failed");
+                        LoggingError(getCurrentTimeString() + " Get User Detail Failed, user " + request.username + " doesn't exist");
                         ctx.result("User "+ request.username +" doesn't existed, Failed");
                         ctx.status(500);
                         return;
                     }
                     SapUserDetail userDetail = getUserDetail(request.server.host, request.username);
                     if (userDetail != null) {
-                        LoggingInfo("Get user detail OK");
 		                ctx.result(userDetail.toString());
                         ctx.status(200);
                         return;
                     } else {
-                        LoggingError("Get User Detail Failed");
+                        LoggingError(getCurrentTimeString()+ " Get User Detail Failed, request:" + request);
                         ctx.result("Failed");
                         ctx.status(500);
                         return;
