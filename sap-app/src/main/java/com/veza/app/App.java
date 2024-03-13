@@ -1045,8 +1045,10 @@ public class App
             char wrongLogon = isLockedStruct.getChar("WRNG_LOGON");
             char localLock = isLockedStruct.getChar("LOCAL_LOCK");
             char globLock = isLockedStruct.getChar("GLOB_LOCK");
-            char noUserPW = isLockedStruct.getChar("NO_USER_PW");
-            LoggingInfo("wrongLogon:" + wrongLogon + " ,localLock:"+localLock+" ,globLock:"+globLock+" ,noUserPw:" +noUserPW);
+            char noUserPW = isLockedStruct.getChar("NO_USER_PW");  // password disabled
+            if (wrongLogon == 'L' || localLock == 'L' || globLock == 'L' || noUserPW == 'L') {
+                result.isLocked = true;
+            }
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
             JCoStructure logonData = function.getExportParameterList().getStructure("LOGONDATA");
