@@ -27,9 +27,10 @@ type SapEccServer struct {
 }
 
 type SapEccLockUserRequest struct {
-	Server   SapEccServer `json:"server"`
-	Username string       `json:"username"`
-	ValidTo  string       `json:"validTo,omitempty"`
+	Server         SapEccServer `json:"server"`
+	Username       string       `json:"username"`
+	ValidTo        string       `json:"validTo,omitempty"`
+	DoNotClearUser bool         `json:"doNotClearUser,omitempty"`
 }
 
 type SapEccGetUserDetailRequest struct {
@@ -70,6 +71,7 @@ type SapEccUserDetailResponse struct {
 	Email              string             `json:"email,omitempty"`
 	ValidFrom          string             `json:"validFrom,omitempty"`
 	ValidTo            string             `json:"validTo,omitempty"`
+	IsLocked           bool               `json:"isLocked,omitempty"`
 	DeactivatePassword bool               `json:"deactivatePassword,omitempty"`
 	Parameters         map[string]string  `json:"parameters,omitempty"`
 	UserGroups         []SapActivityGroup `json:"userGroups"`

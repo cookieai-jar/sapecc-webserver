@@ -418,7 +418,10 @@ public class App
                 synchronized(memoryProvider) {
                     memoryProvider.changeProperties(request.server.host, getDestinationPropertiesFromStruct(request.server));
                     // First remove all activity groups from current user
-                    String message = removeParameterAndLicenseTypeAndGroups(request.server.host, request.username, request.validTo);
+                    String message = "";
+                    if (!request.doNotClearUser) {
+                        message = removeParameterAndLicenseTypeAndGroups(request.server.host, request.username, request.validTo);
+                    }
                     if (!"".equals(message)) {
                         LoggingError("Lock Failed, Unable to remove all roles from a user");
                         ctx.result("Failed with message :" + message);
@@ -1164,9 +1167,10 @@ public class App
         public SapServer server;
         public String username;
         public String validTo;
+        public boolean doNotClearUser;
         @Override
         public String toString() {
-            return "{server="+server.toString()+", username="+username+", validTo="+validTo+"}";
+            return "{server="+server.toString()+", username="+username+", validTo="+validTo+", doNotClearUser="+doNotClearUser+"}";
         }
     }
 
